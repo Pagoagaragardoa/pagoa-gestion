@@ -7,10 +7,22 @@
 // ============================================
 
 async function initDashboard() {
-    await loadDashboardKPIs();
-    await loadDashboardCharts();
-    await loadStockBajo();
-    await loadProductoTerminadoResumen();
+    // Validar que los elementos existen antes de cargar datos
+    if (document.getElementById('kpi-produccion')) {
+        await loadDashboardKPIs();
+    }
+    
+    if (document.getElementById('chart-produccion')) {
+        await loadDashboardCharts();
+    }
+    
+    if (document.getElementById('stock-bajo-table')) {
+        await loadStockBajo();
+    }
+    
+    if (document.getElementById('producto-terminado-table')) {
+        await loadProductoTerminadoResumen();
+    }
 }
 
 async function refreshDashboard() {

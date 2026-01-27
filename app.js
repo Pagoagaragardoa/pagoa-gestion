@@ -390,7 +390,428 @@ function loadView(viewName) {
         </div>
     `;
 };
-            initRecetas();
+       // ============================================
+// MÓDULO: RECETAS
+// ============================================
+
+async function initRecetas() {
+    await loadRecetas();
+    await loadEstilosForFilter();
+    await loadIngredientesForReceta();
+    
+    // Evento para cambiar unidad según ingrediente seleccionado
+    const ingredienteSelect = document.getElementById('receta-ingrediente');
+    if (ingredienteSelect) {
+        ingredienteSelect.addEventListener('change', async (e) => {
+            const materialId = e.target.value;
+            if (materialId) {
+                const { data } = await supabase
+                    .from('materias_primas')
+                    .select('unidad')
+                    .eq('id', materialId)
+                    .single();
+                
+                if (data) {
+                    document.getElementById('receta-unidad').value = data.unidad;
+                }
+            }
+        });
+    }
+    
+    // Evento submit del formulario
+    const form = document.getElementById('receta-form');
+    if (form) {
+        form.addEventListener('submit', handleSaveReceta);
+    }
+}
+
+async function loadRecetas() {
+    try {
+        const { data, error } = await supabase
+            .from('recetas')
+            .select('*')
+            .order('estilo', { ascending: true })
+            .order('tipo_operacion', { ascending: true });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('recetas-container');
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div class="bg-white p-8 rounded-lg card-shadow text-center">
+                    <i class="fas fa-book-open text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg mb-4">No hay recetas registradas</p>
+                    <button onclick="openAddRecetaModal()" class="bg-pagoa-green text-white px-6 py-3 rounded-lg hover:bg-green-800 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Crear Primera Receta
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        // Agrupar por estilo
+        const recetasPorEstilo = data.reduce((acc, receta) => {
+            if (!acc[receta.estilo]) {
+                acc[receta.estilo] = {
+                    'Elaboración de mosto': [],
+                    'Envasado': []
+                };
+            }
+            acc[receta.estilo][receta.tipo_operacion].push(receta);
+            return acc;
+        }, {});
+        
+        let html = '';
+        
+        Object.keys(recetasPorEstilo).sort().forEach(estilo => {
+            html += `
+                <div class="bg-white rounded-lg card-shadow mb-6 estilo-receta" data-estilo="${estilo}">
+                    <div class="bg-pagoa-dark text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+                        <h2 class="text-xl font-bold">
+                            <i class="fas fa-beer mr-2"></i>${estilo}
+                        </h2>
+                        <button onclick="deleteEstiloCompleto('${estilo}')" class="text-red-400 hover:text-red-300 transition-colors">
+                            <i class="fas fa-trash mr-2"></i>Eliminar estilo completo
+                        </button>
+                    </div>
+                    
+                    <div class="p-6">
+            `;
+            
+            // Elaboración de mosto
+            if (recetasPorEstilo[estilo]['Elaboración de mosto'].length > 0) {
+                html += `
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-flask text-green-600 mr-2"></i>
+                            Elaboración de Mosto
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ingrediente</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cantidad por 100L</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unidad</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                `;
+                
+                recetasPorEstilo[estilo]['Elaboración de mosto'].forEach(receta => {
+                    html += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-sm text-gray-900">${receta.ingrediente}</td>
+                            <td class="px-4 py-3 text-sm font-semibold text-gray-900">${parseFloat(receta.cantidad_por_100l).toFixed(2)}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">${receta.unidad}</td>
+                            <td class="px-4 py-3 text-sm">
+                                <button onclick="editReceta(${receta.id})" class="text-blue-600 hover:text-blue-800 mr-3">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteReceta(${receta.id})" class="text-red-600 hover:text-red-800">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Envasado
+            if (recetasPorEstilo[estilo]['Envasado'].length > 0) {
+                html += `
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-box text-blue-600 mr-2"></i>
+                            Envasado
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Material</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cantidad por 100L</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unidad</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                `;
+                
+                recetasPorEstilo[estilo]['Envasado'].forEach(receta => {
+                    html += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-sm text-gray-900">${receta.ingrediente}</td>
+                            <td class="px-4 py-3 text-sm font-semibold text-gray-900">${parseFloat(receta.cantidad_por_100l).toFixed(2)}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">${receta.unidad}</td>
+                            <td class="px-4 py-3 text-sm">
+                                <button onclick="editReceta(${receta.id})" class="text-blue-600 hover:text-blue-800 mr-3">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteReceta(${receta.id})" class="text-red-600 hover:text-red-800">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando recetas:', error);
+        document.getElementById('recetas-container').innerHTML = 
+            '<p class="text-red-600 text-center py-4">Error al cargar recetas</p>';
+    }
+}
+
+async function loadEstilosForFilter() {
+    try {
+        const { data, error } = await supabase
+            .from('recetas')
+            .select('estilo');
+        
+        if (error) throw error;
+        
+        const estilos = [...new Set(data.map(r => r.estilo))].sort();
+        const select = document.getElementById('filter-estilo-recetas');
+        
+        if (select) {
+            estilos.forEach(estilo => {
+                const option = document.createElement('option');
+                option.value = estilo;
+                option.textContent = estilo;
+                select.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error cargando estilos:', error);
+    }
+}
+
+async function loadIngredientesForReceta() {
+    try {
+        const { data, error } = await supabase
+            .from('materias_primas')
+            .select('id, material, tipo, unidad')
+            .order('material', { ascending: true });
+        
+        if (error) throw error;
+        
+        const select = document.getElementById('receta-ingrediente');
+        if (select) {
+            // Limpiar opciones existentes excepto la primera
+            select.innerHTML = '<option value="">Seleccione un material...</option>';
+            
+            // Agrupar por tipo
+            const ingredientes = data.filter(m => m.tipo === 'ingrediente');
+            const envases = data.filter(m => m.tipo === 'envase');
+            
+            if (ingredientes.length > 0) {
+                const optgroupIng = document.createElement('optgroup');
+                optgroupIng.label = '📦 Ingredientes';
+                ingredientes.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.material} (${item.unidad})`;
+                    option.dataset.unidad = item.unidad;
+                    optgroupIng.appendChild(option);
+                });
+                select.appendChild(optgroupIng);
+            }
+            
+            if (envases.length > 0) {
+                const optgroupEnv = document.createElement('optgroup');
+                optgroupEnv.label = '🍾 Envases';
+                envases.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.material} (${item.unidad})`;
+                    option.dataset.unidad = item.unidad;
+                    optgroupEnv.appendChild(option);
+                });
+                select.appendChild(optgroupEnv);
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error cargando ingredientes:', error);
+    }
+}
+
+function filterRecetasByEstilo() {
+    const filtro = document.getElementById('filter-estilo-recetas').value;
+    const estilos = document.querySelectorAll('.estilo-receta');
+    
+    estilos.forEach(estilo => {
+        if (filtro === '' || estilo.dataset.estilo === filtro) {
+            estilo.classList.remove('hidden');
+        } else {
+            estilo.classList.add('hidden');
+        }
+    });
+}
+
+function openAddRecetaModal() {
+    document.getElementById('receta-modal-title').textContent = 'Nueva Receta';
+    document.getElementById('receta-form').reset();
+    document.getElementById('receta-id').value = '';
+    openModal('receta-modal');
+}
+
+async function editReceta(id) {
+    try {
+        const { data, error } = await supabase
+            .from('recetas')
+            .select('*')
+            .eq('id', id)
+            .single();
+        
+        if (error) throw error;
+        
+        // Buscar el ID del material por su nombre
+        const { data: material } = await supabase
+            .from('materias_primas')
+            .select('id')
+            .eq('material', data.ingrediente)
+            .single();
+        
+        document.getElementById('receta-modal-title').textContent = 'Editar Receta';
+        document.getElementById('receta-id').value = data.id;
+        document.getElementById('receta-estilo').value = data.estilo;
+        document.getElementById('receta-tipo-operacion').value = data.tipo_operacion;
+        document.getElementById('receta-ingrediente').value = material?.id || '';
+        document.getElementById('receta-cantidad').value = data.cantidad_por_100l;
+        document.getElementById('receta-unidad').value = data.unidad;
+        
+        openModal('receta-modal');
+        
+    } catch (error) {
+        console.error('Error cargando receta:', error);
+        alert('Error al cargar la receta');
+    }
+}
+
+async function handleSaveReceta(e) {
+    e.preventDefault();
+    
+    try {
+        const id = document.getElementById('receta-id').value;
+        const ingredienteId = document.getElementById('receta-ingrediente').value;
+        
+        // Obtener nombre del ingrediente
+        const { data: material } = await supabase
+            .from('materias_primas')
+            .select('material')
+            .eq('id', ingredienteId)
+            .single();
+        
+        const recetaData = {
+            estilo: document.getElementById('receta-estilo').value,
+            tipo_operacion: document.getElementById('receta-tipo-operacion').value,
+            ingrediente: material.material,
+            cantidad_por_100l: parseFloat(document.getElementById('receta-cantidad').value),
+            unidad: document.getElementById('receta-unidad').value
+        };
+        
+        if (id) {
+            // Actualizar
+            const { error } = await supabase
+                .from('recetas')
+                .update(recetaData)
+                .eq('id', id);
+            
+            if (error) throw error;
+            alert('Receta actualizada correctamente');
+        } else {
+            // Insertar
+            const { error } = await supabase
+                .from('recetas')
+                .insert([recetaData]);
+            
+            if (error) throw error;
+            alert('Receta añadida correctamente');
+        }
+        
+        closeModal('receta-modal');
+        await loadRecetas();
+        await loadEstilosForFilter();
+        
+    } catch (error) {
+        console.error('Error guardando receta:', error);
+        alert('Error al guardar la receta: ' + error.message);
+    }
+}
+
+async function deleteReceta(id) {
+    if (!confirm('¿Está seguro de eliminar esta receta?')) {
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('recetas')
+            .delete()
+            .eq('id', id);
+        
+        if (error) throw error;
+        
+        alert('Receta eliminada correctamente');
+        await loadRecetas();
+        await loadEstilosForFilter();
+        
+    } catch (error) {
+        console.error('Error eliminando receta:', error);
+        alert('Error al eliminar la receta');
+    }
+}
+
+async function deleteEstiloCompleto(estilo) {
+    if (!confirm(`¿Está seguro de eliminar TODAS las recetas del estilo "${estilo}"? Esta acción no se puede deshacer.`)) {
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('recetas')
+            .delete()
+            .eq('estilo', estilo);
+        
+        if (error) throw error;
+        
+        alert(`Todas las recetas de "${estilo}" han sido eliminadas`);
+        await loadRecetas();
+        await loadEstilosForFilter();
+        
+    } catch (error) {
+        console.error('Error eliminando estilo:', error);
+        alert('Error al eliminar el estilo');
+    }
+};
             break;
         case 'historial':
             contentArea.innerHTML = getHistorialHTML();

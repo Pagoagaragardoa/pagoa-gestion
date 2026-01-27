@@ -351,7 +351,7 @@ async function loadProductoTerminadoResumen() {
 let currentMaterialTab = 'ingredientes';
 
 async function initMateriasPrimas() {
-    await loadMateriales('ingredientes');
+    await loadMateriales('ingrediente');
     
     // Evento para mostrar/ocultar capacidad según tipo
     const tipoSelect = document.getElementById('material-tipo');
@@ -387,7 +387,9 @@ function switchMaterialTab(tab) {
         ? 'px-6 py-3 font-semibold text-pagoa-green border-b-2 border-pagoa-green'
         : 'px-6 py-3 font-semibold text-gray-600 hover:text-pagoa-green';
     
-    loadMateriales(tab);
+    // Convertir a singular para la consulta
+    const tipoSingular = tab === 'ingredientes' ? 'ingrediente' : 'envase';
+    loadMateriales(tipoSingular);
 }
 
 async function loadMateriales(tipo) {
@@ -530,7 +532,7 @@ async function handleSaveMaterial(e) {
     
     try {
         const id = document.getElementById('material-id').value;
-        const tipo = document.getElementById('material-tipo').value;
+        const tipo = document.getElementById('material-tipo').value; // Ya está en singular
         
         const materialData = {
             tipo: tipo,
@@ -568,9 +570,7 @@ async function handleSaveMaterial(e) {
         
         closeModal('material-modal');
         
-        // IMPORTANTE: Recargar con el tipo correcto
-        // Asegurarse de que currentMaterialTab esté sincronizado
-        currentMaterialTab = tipo;
+        // Recargar con el tipo en SINGULAR (como está en la BD)
         await loadMateriales(tipo);
         
     } catch (error) {

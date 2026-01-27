@@ -258,8 +258,1013 @@ function loadView(viewName) {
             initMateriasPrimas();
             break;
         case 'produccion':
-            contentArea.innerHTML = getProduccionHTML();
-            initProduccion();
+            contentArea.innerHTML = function getProduccionHTML() {
+    return `
+        <div class="fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-industry text-pagoa-green mr-3"></i>Producción
+                </h1>
+                <button onclick="openAddProduccionModal()" class="bg-pagoa-green text-white px-4 py-2 rounded-lg hover:bg-green-800 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Nueva Operación
+                </button>
+            </div>
+            
+            <!-- Tabs: Operaciones / Resumen de Lotes -->
+            <div class="bg-white rounded-lg card-shadow mb-6">
+                <div class="flex border-b">
+                    <button onclick="switchProduccionTab('operaciones')" 
+                            id="tab-operaciones"
+                            class="px-6 py-3 font-semibold text-pagoa-green border-b-2 border-pagoa-green">
+                        <i class="fas fa-list mr-2"></i>Operaciones
+                    </button>
+                    <button onclick="switchProduccionTab('lotes')" 
+                            id="tab-lotes"
+                            class="px-6 py-3 font-semibold text-gray-600 hover:text-pagoa-green">
+                        <i class="fas fa-clipboard-list mr-2"></i>Resumen de Lotes
+                    </button>
+                </div>
+                
+                <div class="p-6">
+                    <!-- Filtros -->
+                    <div class="flex flex-wrap gap-4 mb-6">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Tipo de Operación</label>
+                            <select id="filter-tipo-operacion" onchange="filterProduccion()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">Todas</option>
+                                <option value="Elaboración de mosto">Elaboración de mosto</option>
+                                <option value="Envasado">Envasado</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Estado</label>
+                            <select id="filter-estado" onchange="filterProduccion()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">Todos</option>
+                                <option value="true">Confirmados</option>
+                                <option value="false">Pendientes</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Mes</label>
+                            <select id="filter-mes" onchange="filterProduccion()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-end">
+                            <button onclick="loadProduccionOperaciones()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm transition-colors">
+                                <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Contenido de tabs -->
+                    <div id="produccion-operaciones-content">
+                        <p class="text-gray-500 text-center py-8">Cargando operaciones...</p>
+                    </div>
+                    
+                    <div id="produccion-lotes-content" class="hidden">
+                        <p class="text-gray-500 text-center py-8">Cargando lotes...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal para nueva operación -->
+        <div id="produccion-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-2xl font-bold mb-4" id="produccion-modal-title">Nueva Operación de Producción</h3>
+                
+                <form id="produccion-form" class="space-y-4">
+                    <input type="hidden" id="produccion-id">
+                    
+                    <!-- Fecha -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha *</label>
+                        <input type="date" 
+                               id="produccion-fecha" 
+                               required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <!-- Tipo de Operación -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Operación *</label>
+                        <select id="produccion-tipo" required onchange="updateProduccionForm()" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                            <option value="">Seleccione...</option>
+                            <option value="Elaboración de mosto">Elaboración de mosto</option>
+                            <option value="Envasado">Envasado</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Número de Lote -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Número de Lote *</label>
+                            <input type="text" 
+                                   id="produccion-lote" 
+                                   required 
+                                   placeholder="Ej: L001"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                        </div>
+                        
+                        <!-- Estilo -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Estilo de Cerveza *</label>
+                            <input type="text" 
+                                   id="produccion-estilo" 
+                                   required 
+                                   list="estilos-produccion-datalist"
+                                   onchange="loadRecetaForEstilo()"
+                                   placeholder="Ej: IPA"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                            <datalist id="estilos-produccion-datalist"></datalist>
+                        </div>
+                    </div>
+                    
+                    <!-- Volumen -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Volumen (Litros) *</label>
+                        <input type="number" 
+                               step="0.01" 
+                               id="produccion-volumen" 
+                               required 
+                               onchange="calculateCostoProduccion()"
+                               placeholder="100.00"
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <!-- Campos específicos para Envasado -->
+                    <div id="envasado-fields" class="hidden space-y-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Envase</label>
+                                <select id="produccion-envase" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Chapa/Tapa</label>
+                                <select id="produccion-chapa" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Etiqueta/Vitola</label>
+                                <select id="produccion-etiqueta" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ubicación -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ubicación</label>
+                        <input type="text" 
+                               id="produccion-ubicacion" 
+                               placeholder="Ej: Tanque 1, Cámara 2..."
+                               class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <!-- Costo estimado -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Costo Estimado de Materiales</p>
+                                <p class="text-xs text-gray-500 mt-1">Calculado según receta y volumen</p>
+                            </div>
+                            <p class="text-2xl font-bold text-blue-600" id="costo-estimado">0.00 €</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Materiales que se descontarán -->
+                    <div id="materiales-descuento" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 hidden">
+                        <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                            Materiales que se descontarán del inventario:
+                        </h4>
+                        <div id="lista-materiales-descuento" class="text-sm text-gray-700"></div>
+                    </div>
+                    
+                    <div class="flex space-x-3 mt-6">
+                        <button type="submit" class="flex-1 bg-yellow-500 text-white py-3 rounded-lg hover:bg-yellow-600 transition-colors font-semibold">
+                            <i class="fas fa-save mr-2"></i>Guardar (Sin Confirmar)
+                        </button>
+                        <button type="button" onclick="closeModal('produccion-modal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Modal de confirmación de operación -->
+        <div id="confirmar-operacion-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+                <h3 class="text-2xl font-bold mb-4 text-red-600">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Confirmar Operación
+                </h3>
+                
+                <div class="mb-6">
+                    <p class="text-gray-700 mb-4">¿Está seguro de confirmar esta operación?</p>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p class="text-sm text-red-800 font-semibold mb-2">Esta acción:</p>
+                        <ul class="text-sm text-red-700 list-disc list-inside space-y-1">
+                            <li>Descontará materiales del inventario</li>
+                            <li>Registrará la operación en el historial</li>
+                            <li>NO podrá editarse después</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="confirmar-operacion-id">
+                
+                <div class="flex space-x-3">
+                    <button onclick="confirmarOperacion()" class="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                        <i class="fas fa-check mr-2"></i>Sí, Confirmar
+                    </button>
+                    <button onclick="closeModal('confirmar-operacion-modal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+};
+            // ============================================
+// MÓDULO: PRODUCCIÓN
+// ============================================
+
+let currentProduccionTab = 'operaciones';
+let recetaActual = null;
+
+async function initProduccion() {
+    // Establecer fecha de hoy por defecto
+    const hoy = new Date().toISOString().split('T')[0];
+    const fechaInput = document.getElementById('produccion-fecha');
+    if (fechaInput) {
+        fechaInput.value = hoy;
+    }
+    
+    await loadProduccionOperaciones();
+    await loadMesesForFilter();
+    await loadEstilosForProduccion();
+    await loadEnvasesForProduccion();
+    
+    // Evento submit del formulario
+    const form = document.getElementById('produccion-form');
+    if (form) {
+        form.addEventListener('submit', handleSaveProduccion);
+    }
+}
+
+function switchProduccionTab(tab) {
+    currentProduccionTab = tab;
+    
+    // Actualizar UI de tabs
+    document.getElementById('tab-operaciones').className = 
+        tab === 'operaciones' 
+        ? 'px-6 py-3 font-semibold text-pagoa-green border-b-2 border-pagoa-green'
+        : 'px-6 py-3 font-semibold text-gray-600 hover:text-pagoa-green';
+    
+    document.getElementById('tab-lotes').className = 
+        tab === 'lotes' 
+        ? 'px-6 py-3 font-semibold text-pagoa-green border-b-2 border-pagoa-green'
+        : 'px-6 py-3 font-semibold text-gray-600 hover:text-pagoa-green';
+    
+    // Mostrar/ocultar contenido
+    if (tab === 'operaciones') {
+        document.getElementById('produccion-operaciones-content').classList.remove('hidden');
+        document.getElementById('produccion-lotes-content').classList.add('hidden');
+        loadProduccionOperaciones();
+    } else {
+        document.getElementById('produccion-operaciones-content').classList.add('hidden');
+        document.getElementById('produccion-lotes-content').classList.remove('hidden');
+        loadProduccionLotes();
+    }
+}
+
+async function loadProduccionOperaciones() {
+    try {
+        const { data, error } = await supabase
+            .from('produccion')
+            .select('*')
+            .order('fecha', { ascending: false })
+            .order('id', { ascending: false });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('produccion-operaciones-content');
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-industry text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg mb-4">No hay operaciones registradas</p>
+                    <button onclick="openAddProduccionModal()" class="bg-pagoa-green text-white px-6 py-3 rounded-lg hover:bg-green-800 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Registrar Primera Operación
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <div class="overflow-x-auto">
+                <table class="min-w-full" id="tabla-produccion">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lote</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estilo</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Volumen (L)</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Costo (€)</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+        `;
+        
+        data.forEach(op => {
+            const fecha = new Date(op.fecha).toLocaleDateString('es-ES');
+            const confirmado = op.confirmado;
+            const estadoBadge = confirmado 
+                ? '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800"><i class="fas fa-check mr-1"></i>Confirmado</span>'
+                : '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800"><i class="fas fa-clock mr-1"></i>Pendiente</span>';
+            
+            const tipoIcon = op.tipo_operacion === 'Elaboración de mosto' 
+                ? '<i class="fas fa-flask text-green-600 mr-1"></i>' 
+                : '<i class="fas fa-box text-blue-600 mr-1"></i>';
+            
+            html += `
+                <tr class="hover:bg-gray-50" data-tipo="${op.tipo_operacion}" data-confirmado="${confirmado}" data-fecha="${op.fecha}">
+                    <td class="px-4 py-3 text-sm text-gray-900">${fecha}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${tipoIcon}${op.tipo_operacion}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">${op.numero_lote}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${op.estilo_cerveza}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">${parseFloat(op.volumen_litros).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${parseFloat(op.costo || 0).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-sm">${estadoBadge}</td>
+                    <td class="px-4 py-3 text-sm">
+                        ${!confirmado ? `
+                            <button onclick="openConfirmarOperacionModal(${op.id})" 
+                                    class="text-green-600 hover:text-green-800 mr-3" 
+                                    title="Confirmar operación">
+                                <i class="fas fa-check-circle"></i>
+                            </button>
+                            <button onclick="deleteProduccion(${op.id})" 
+                                    class="text-red-600 hover:text-red-800" 
+                                    title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        ` : `
+                            <button onclick="viewProduccionDetails(${op.id})" 
+                                    class="text-blue-600 hover:text-blue-800" 
+                                    title="Ver detalles">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        `}
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando operaciones:', error);
+        document.getElementById('produccion-operaciones-content').innerHTML = 
+            '<p class="text-red-600 text-center py-4">Error al cargar operaciones</p>';
+    }
+}
+
+async function loadProduccionLotes() {
+    try {
+        const { data, error } = await supabase
+            .from('produccion')
+            .select('*')
+            .eq('confirmado', true)
+            .order('numero_lote', { ascending: true });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('produccion-lotes-content');
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-clipboard-list text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500">No hay lotes confirmados</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Agrupar por lote
+        const lotes = data.reduce((acc, op) => {
+            if (!acc[op.numero_lote]) {
+                acc[op.numero_lote] = {
+                    lote: op.numero_lote,
+                    estilo: op.estilo_cerveza,
+                    elaborado: 0,
+                    envasado: 0,
+                    operaciones: []
+                };
+            }
+            
+            acc[op.numero_lote].operaciones.push(op);
+            
+            if (op.tipo_operacion === 'Elaboración de mosto') {
+                acc[op.numero_lote].elaborado += parseFloat(op.volumen_litros);
+            } else if (op.tipo_operacion === 'Envasado') {
+                acc[op.numero_lote].envasado += parseFloat(op.volumen_litros);
+            }
+            
+            return acc;
+        }, {});
+        
+        let html = `
+            <div class="space-y-4">
+        `;
+        
+        Object.values(lotes).forEach(lote => {
+            const mermas = lote.elaborado - lote.envasado;
+            const disponible = lote.elaborado - lote.envasado;
+            const porcentajeMerma = lote.elaborado > 0 ? ((mermas / lote.elaborado) * 100).toFixed(1) : 0;
+            
+            let estadoLote = '';
+            if (lote.envasado === 0) {
+                estadoLote = '<span class="px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">En Fermentación</span>';
+            } else if (disponible > 0) {
+                estadoLote = '<span class="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">Parcialmente Envasado</span>';
+            } else {
+                estadoLote = '<span class="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">Completamente Envasado</span>';
+            }
+            
+            html += `
+                <div class="bg-white rounded-lg card-shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">${lote.lote}</h3>
+                            <p class="text-gray-600">${lote.estilo}</p>
+                        </div>
+                        ${estadoLote}
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <p class="text-xs text-gray-600 mb-1">Vol. Elaborado</p>
+                            <p class="text-xl font-bold text-blue-600">${lote.elaborado.toFixed(2)} L</p>
+                        </div>
+                        
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-xs text-gray-600 mb-1">Vol. Envasado</p>
+                            <p class="text-xl font-bold text-green-600">${lote.envasado.toFixed(2)} L</p>
+                        </div>
+                        
+                        <div class="bg-orange-50 p-4 rounded-lg">
+                            <p class="text-xs text-gray-600 mb-1">Mermas</p>
+                            <p class="text-xl font-bold text-orange-600">${mermas.toFixed(2)} L</p>
+                            <p class="text-xs text-gray-500">(${porcentajeMerma}%)</p>
+                        </div>
+                        
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <p class="text-xs text-gray-600 mb-1">Disponible</p>
+                            <p class="text-xl font-bold text-purple-600">${disponible.toFixed(2)} L</p>
+                        </div>
+                    </div>
+                    
+                    <details class="text-sm">
+                        <summary class="cursor-pointer text-gray-600 hover:text-gray-900 font-medium">
+                            Ver ${lote.operaciones.length} operación(es)
+                        </summary>
+                        <div class="mt-3 space-y-2">
+                            ${lote.operaciones.map(op => `
+                                <div class="bg-gray-50 p-3 rounded">
+                                    <span class="font-medium">${new Date(op.fecha).toLocaleDateString('es-ES')}</span> - 
+                                    ${op.tipo_operacion}: ${parseFloat(op.volumen_litros).toFixed(2)} L
+                                    (${parseFloat(op.costo || 0).toFixed(2)} €)
+                                </div>
+                            `).join('')}
+                        </div>
+                    </details>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando lotes:', error);
+        document.getElementById('produccion-lotes-content').innerHTML = 
+            '<p class="text-red-600 text-center py-4">Error al cargar lotes</p>';
+    }
+}
+
+async function loadMesesForFilter() {
+    const select = document.getElementById('filter-mes');
+    if (!select) return;
+    
+    const meses = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    const añoActual = new Date().getFullYear();
+    
+    for (let i = 0; i < 12; i++) {
+        const option = document.createElement('option');
+        option.value = `${añoActual}-${String(i + 1).padStart(2, '0')}`;
+        option.textContent = `${meses[i]} ${añoActual}`;
+        select.appendChild(option);
+    }
+}
+
+async function loadEstilosForProduccion() {
+    try {
+        const { data, error } = await supabase
+            .from('recetas')
+            .select('estilo');
+        
+        if (error) throw error;
+        
+        const estilos = [...new Set(data.map(r => r.estilo))].sort();
+        const datalist = document.getElementById('estilos-produccion-datalist');
+        
+        if (datalist) {
+            datalist.innerHTML = '';
+            estilos.forEach(estilo => {
+                const option = document.createElement('option');
+                option.value = estilo;
+                datalist.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error cargando estilos:', error);
+    }
+}
+
+async function loadEnvasesForProduccion() {
+    try {
+        const { data, error } = await supabase
+            .from('materias_primas')
+            .select('material')
+            .eq('tipo', 'envase')
+            .order('material', { ascending: true });
+        
+        if (error) throw error;
+        
+        const selects = ['produccion-envase', 'produccion-chapa', 'produccion-etiqueta'];
+        
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+                select.innerHTML = '<option value="">Seleccione...</option>';
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.material;
+                    option.textContent = item.material;
+                    select.appendChild(option);
+                });
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error cargando envases:', error);
+    }
+}
+
+function updateProduccionForm() {
+    const tipo = document.getElementById('produccion-tipo').value;
+    const envasadoFields = document.getElementById('envasado-fields');
+    
+    if (tipo === 'Envasado') {
+        envasadoFields.classList.remove('hidden');
+    } else {
+        envasadoFields.classList.add('hidden');
+    }
+}
+
+async function loadRecetaForEstilo() {
+    const estilo = document.getElementById('produccion-estilo').value;
+    const tipo = document.getElementById('produccion-tipo').value;
+    
+    if (!estilo || !tipo) return;
+    
+    try {
+        const { data, error } = await supabase
+            .from('recetas')
+            .select('*')
+            .eq('estilo', estilo)
+            .eq('tipo_operacion', tipo);
+        
+        if (error) throw error;
+        
+        recetaActual = data;
+        calculateCostoProduccion();
+        
+    } catch (error) {
+        console.error('Error cargando receta:', error);
+        recetaActual = null;
+    }
+}
+
+async function calculateCostoProduccion() {
+    const volumen = parseFloat(document.getElementById('produccion-volumen').value) || 0;
+    const estilo = document.getElementById('produccion-estilo').value;
+    const tipo = document.getElementById('produccion-tipo').value;
+    
+    if (volumen === 0 || !estilo || !tipo) {
+        document.getElementById('costo-estimado').textContent = '0.00 €';
+        document.getElementById('materiales-descuento').classList.add('hidden');
+        return;
+    }
+    
+    // Cargar receta si no está cargada
+    if (!recetaActual) {
+        await loadRecetaForEstilo();
+    }
+    
+    if (!recetaActual || recetaActual.length === 0) {
+        document.getElementById('costo-estimado').textContent = 'Sin receta';
+        document.getElementById('materiales-descuento').classList.add('hidden');
+        return;
+    }
+    
+    // Calcular costo y materiales
+    let costoTotal = 0;
+    let materialesHtml = '<ul class="list-disc list-inside space-y-1">';
+    let hayStockInsuficiente = false;
+    
+    for (const item of recetaActual) {
+        const cantidadNecesaria = (parseFloat(item.cantidad_por_100l) * volumen) / 100;
+        
+        // Obtener información del material
+        const { data: material } = await supabase
+            .from('materias_primas')
+            .select('*')
+            .eq('material', item.ingrediente)
+            .single();
+        
+        if (material) {
+            const costoItem = cantidadNecesaria * parseFloat(material.costo_unitario);
+            costoTotal += costoItem;
+            
+            const stockActual = parseFloat(material.stock);
+            const stockSuficiente = stockActual >= cantidadNecesaria;
+            
+            if (!stockSuficiente) {
+                hayStockInsuficiente = true;
+            }
+            
+            const colorClass = stockSuficiente ? 'text-green-700' : 'text-red-700 font-bold';
+            const icon = stockSuficiente ? '✓' : '⚠️';
+            
+            materialesHtml += `
+                <li class="${colorClass}">
+                    ${icon} ${item.ingrediente}: ${cantidadNecesaria.toFixed(2)} ${item.unidad}
+                    (Stock actual: ${stockActual.toFixed(2)} ${item.unidad})
+                    - ${costoItem.toFixed(2)} €
+                </li>
+            `;
+        }
+    }
+    
+    materialesHtml += '</ul>';
+    
+    if (hayStockInsuficiente) {
+        materialesHtml += '<p class="text-red-700 font-bold mt-3"><i class="fas fa-exclamation-triangle mr-2"></i>ADVERTENCIA: Stock insuficiente para algunos materiales</p>';
+    }
+    
+    document.getElementById('costo-estimado').textContent = costoTotal.toFixed(2) + ' €';
+    document.getElementById('lista-materiales-descuento').innerHTML = materialesHtml;
+    document.getElementById('materiales-descuento').classList.remove('hidden');
+}
+
+function openAddProduccionModal() {
+    document.getElementById('produccion-modal-title').textContent = 'Nueva Operación de Producción';
+    document.getElementById('produccion-form').reset();
+    document.getElementById('produccion-id').value = '';
+    
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('produccion-fecha').value = hoy;
+    
+    document.getElementById('envasado-fields').classList.add('hidden');
+    document.getElementById('materiales-descuento').classList.add('hidden');
+    document.getElementById('costo-estimado').textContent = '0.00 €';
+    
+    recetaActual = null;
+    
+    openModal('produccion-modal');
+}
+
+async function handleSaveProduccion(e) {
+    e.preventDefault();
+    
+    try {
+        const tipo = document.getElementById('produccion-tipo').value;
+        const volumen = parseFloat(document.getElementById('produccion-volumen').value);
+        const estilo = document.getElementById('produccion-estilo').value;
+        
+        // Verificar que hay receta
+        if (!recetaActual || recetaActual.length === 0) {
+            if (!confirm('No hay receta definida para este estilo y operación. ¿Desea continuar de todos modos? (No se descontará inventario)')) {
+                return;
+            }
+        }
+        
+        // Verificar stock suficiente
+        if (recetaActual && recetaActual.length > 0) {
+            for (const item of recetaActual) {
+                const cantidadNecesaria = (parseFloat(item.cantidad_por_100l) * volumen) / 100;
+                
+                const { data: material } = await supabase
+                    .from('materias_primas')
+                    .select('stock')
+                    .eq('material', item.ingrediente)
+                    .single();
+                
+                if (material && parseFloat(material.stock) < cantidadNecesaria) {
+                    if (!confirm(`ADVERTENCIA: Stock insuficiente de "${item.ingrediente}". ¿Desea continuar de todos modos?`)) {
+                        return;
+                    }
+                }
+            }
+        }
+        
+        const produccionData = {
+            fecha: document.getElementById('produccion-fecha').value,
+            tipo_operacion: tipo,
+            numero_lote: document.getElementById('produccion-lote').value,
+            estilo_cerveza: estilo,
+            volumen_litros: volumen,
+            ubicacion: document.getElementById('produccion-ubicacion').value || null,
+            costo: parseFloat(document.getElementById('costo-estimado').textContent) || 0,
+            confirmado: false,
+            created_by: currentUser.id
+        };
+        
+        // Campos específicos de envasado
+        if (tipo === 'Envasado') {
+            produccionData.tipo_envase = document.getElementById('produccion-envase').value || null;
+            produccionData.tipo_chapa_tapa = document.getElementById('produccion-chapa').value || null;
+            produccionData.tipo_etiqueta_vitola = document.getElementById('produccion-etiqueta').value || null;
+        }
+        
+        const { data, error } = await supabase
+            .from('produccion')
+            .insert([produccionData])
+            .select();
+        
+        if (error) throw error;
+        
+        alert('Operación guardada correctamente (sin confirmar). Recuerde confirmarla para descontar inventario.');
+        
+        closeModal('produccion-modal');
+        loadProduccionOperaciones();
+        
+    } catch (error) {
+        console.error('Error guardando producción:', error);
+        alert('Error al guardar la operación: ' + error.message);
+    }
+}
+
+function openConfirmarOperacionModal(id) {
+    document.getElementById('confirmar-operacion-id').value = id;
+    openModal('confirmar-operacion-modal');
+}
+
+async function confirmarOperacion() {
+    const id = document.getElementById('confirmar-operacion-id').value;
+    
+    try {
+        // Obtener datos de la operación
+        const { data: operacion, error: fetchError } = await supabase
+            .from('produccion')
+            .select('*')
+            .eq('id', id)
+            .single();
+        
+        if (fetchError) throw fetchError;
+        
+        // Cargar receta
+        const { data: receta, error: recetaError } = await supabase
+            .from('recetas')
+            .select('*')
+            .eq('estilo', operacion.estilo_cerveza)
+            .eq('tipo_operacion', operacion.tipo_operacion);
+        
+        if (recetaError) throw recetaError;
+        
+        // Descontar materiales del inventario
+        if (receta && receta.length > 0) {
+            for (const item of receta) {
+                const cantidadNecesaria = (parseFloat(item.cantidad_por_100l) * parseFloat(operacion.volumen_litros)) / 100;
+                
+                // Obtener material actual
+                const { data: material, error: materialError } = await supabase
+                    .from('materias_primas')
+                    .select('*')
+                    .eq('material', item.ingrediente)
+                    .single();
+                
+                if (materialError) {
+                    console.error('Error obteniendo material:', materialError);
+                    continue;
+                }
+                
+                // Calcular nuevo stock
+                const nuevoStock = parseFloat(material.stock) - cantidadNecesaria;
+                
+                // Actualizar stock
+                const { error: updateError } = await supabase
+                    .from('materias_primas')
+                    .update({ stock: Math.max(0, nuevoStock) })
+                    .eq('id', material.id);
+                
+                if (updateError) throw updateError;
+                
+                // Registrar en historial
+                await supabase
+                    .from('historial')
+                    .insert([{
+                        tipo_operacion: operacion.tipo_operacion,
+                        numero_lote: operacion.numero_lote,
+                        estilo: operacion.estilo_cerveza,
+                        volumen_litros: operacion.volumen_litros,
+                        material_afectado: item.ingrediente,
+                        cantidad_descontada: cantidadNecesaria,
+                        estado: 'ACTIVO',
+                        detalles: {
+                            produccion_id: operacion.id,
+                            stock_anterior: parseFloat(material.stock),
+                            stock_nuevo: nuevoStock
+                        },
+                        created_by: currentUser.id
+                    }]);
+            }
+        }
+        
+        // Si es envasado, crear registro en producto_terminado
+        if (operacion.tipo_operacion === 'Envasado' && operacion.tipo_envase) {
+            // Calcular unidades según capacidad del envase
+            const { data: envase } = await supabase
+                .from('materias_primas')
+                .select('capacidad_litros')
+                .eq('material', operacion.tipo_envase)
+                .single();
+            
+            let unidades = 0;
+            if (envase && envase.capacidad_litros) {
+                unidades = Math.floor(parseFloat(operacion.volumen_litros) / parseFloat(envase.capacidad_litros));
+            }
+            
+            // Calcular fecha de caducidad (6 meses por defecto para cerveza artesanal)
+            const fechaEnvasado = new Date(operacion.fecha);
+            const fechaCaducidad = new Date(fechaEnvasado);
+            fechaCaducidad.setMonth(fechaCaducidad.getMonth() + 6);
+            
+            await supabase
+                .from('producto_terminado')
+                .insert([{
+                    numero_lote: operacion.numero_lote,
+                    estilo: operacion.estilo_cerveza,
+                    tipo_envase: operacion.tipo_envase,
+                    unidades_producidas: unidades,
+                    fecha_envasado: operacion.fecha,
+                    fecha_caducidad: fechaCaducidad.toISOString().split('T')[0],
+                    ubicacion: operacion.ubicacion
+                }]);
+        }
+        
+        // Marcar operación como confirmada
+        const { error: confirmError } = await supabase
+            .from('produccion')
+            .update({ confirmado: true })
+            .eq('id', id);
+        
+        if (confirmError) throw confirmError;
+        
+        alert('✅ Operación confirmada exitosamente. Inventario actualizado.');
+        
+        closeModal('confirmar-operacion-modal');
+        loadProduccionOperaciones();
+        
+        // Actualizar dashboard si está visible
+        if (currentView === 'dashboard') {
+            initDashboard();
+        }
+        
+    } catch (error) {
+        console.error('Error confirmando operación:', error);
+        alert('Error al confirmar la operación: ' + error.message);
+    }
+}
+
+async function deleteProduccion(id) {
+    if (!confirm('¿Está seguro de eliminar esta operación? Solo se pueden eliminar operaciones NO confirmadas.')) {
+        return;
+    }
+    
+    try {
+        const { error } = await supabase
+            .from('produccion')
+            .delete()
+            .eq('id', id)
+            .eq('confirmado', false);
+        
+        if (error) throw error;
+        
+        alert('Operación eliminada correctamente');
+        loadProduccionOperaciones();
+        
+    } catch (error) {
+        console.error('Error eliminando operación:', error);
+        alert('Error al eliminar la operación. Solo se pueden eliminar operaciones NO confirmadas.');
+    }
+}
+
+async function viewProduccionDetails(id) {
+    try {
+        const { data, error } = await supabase
+            .from('produccion')
+            .select('*')
+            .eq('id', id)
+            .single();
+        
+        if (error) throw error;
+        
+        let detalles = `
+            <strong>Fecha:</strong> ${new Date(data.fecha).toLocaleDateString('es-ES')}<br>
+            <strong>Tipo:</strong> ${data.tipo_operacion}<br>
+            <strong>Lote:</strong> ${data.numero_lote}<br>
+            <strong>Estilo:</strong> ${data.estilo_cerveza}<br>
+            <strong>Volumen:</strong> ${parseFloat(data.volumen_litros).toFixed(2)} L<br>
+            <strong>Costo:</strong> ${parseFloat(data.costo || 0).toFixed(2)} €<br>
+            <strong>Ubicación:</strong> ${data.ubicacion || 'N/A'}<br>
+        `;
+        
+        if (data.tipo_operacion === 'Envasado') {
+            detalles += `
+                <strong>Envase:</strong> ${data.tipo_envase || 'N/A'}<br>
+                <strong>Chapa/Tapa:</strong> ${data.tipo_chapa_tapa || 'N/A'}<br>
+                <strong>Etiqueta:</strong> ${data.tipo_etiqueta_vitola || 'N/A'}<br>
+            `;
+        }
+        
+        alert(detalles);
+        
+    } catch (error) {
+        console.error('Error cargando detalles:', error);
+        alert('Error al cargar los detalles');
+    }
+}
+
+function filterProduccion() {
+    const tipoFiltro = document.getElementById('filter-tipo-operacion').value;
+    const estadoFiltro = document.getElementById('filter-estado').value;
+    const mesFiltro = document.getElementById('filter-mes').value;
+    
+    const filas = document.querySelectorAll('#tabla-produccion tbody tr');
+    
+    filas.forEach(fila => {
+        let mostrar = true;
+        
+        // Filtro por tipo
+        if (tipoFiltro && fila.dataset.tipo !== tipoFiltro) {
+            mostrar = false;
+        }
+        
+        // Filtro por estado
+        if (estadoFiltro && fila.dataset.confirmado !== estadoFiltro) {
+            mostrar = false;
+        }
+        
+        // Filtro por mes
+        if (mesFiltro) {
+            const fechaFila = fila.dataset.fecha;
+            if (!fechaFila.startsWith(mesFiltro)) {
+                mostrar = false;
+            }
+        }
+        
+        if (mostrar) {
+            fila.classList.remove('hidden');
+        } else {
+            fila.classList.add('hidden');
+        }
+    });
+}
             break;
         case 'producto-terminado':
             contentArea.innerHTML = getProductoTerminadoHTML();

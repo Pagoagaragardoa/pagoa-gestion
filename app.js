@@ -6,7 +6,8 @@
 // ============================================
 
 // Inicializar cliente de Supabase
-let supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+if (!window.supabase) {
+    const supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
 console.log('🟢 Cliente Supabase inicializado correctamente');
 
 // ============================================

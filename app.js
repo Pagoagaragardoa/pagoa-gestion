@@ -5,10 +5,14 @@
 // INICIALIZAR SUPABASE
 // ============================================
 
-// Inicializar cliente de Supabase
-if (!window.supabase) {
-    const supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
-console.log('🟢 Cliente Supabase inicializado correctamente');
+// Inicializar cliente de Supabase (usar variable global única)
+var supabase;
+try {
+    supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+    console.log('🟢 Cliente Supabase inicializado correctamente');
+} catch (error) {
+    console.error('❌ Error inicializando Supabase:', error);
+}
 
 // ============================================
 // Variables globales

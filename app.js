@@ -1,7 +1,15 @@
 // ============================================
 // PAGOA CERVECERÍA - APLICACIÓN PRINCIPAL
 // ============================================
+// ============================================
+// INICIALIZAR SUPABASE
+// ============================================
 
+// Inicializar cliente de Supabase
+const supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+console.log('🟢 Cliente Supabase inicializado correctamente');
+
+// ============================================
 // Variables globales
 let currentUser = null;
 let currentView = 'dashboard';

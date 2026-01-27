@@ -513,14 +513,15 @@ async function editMaterial(id) {
         alert('Error al cargar el material');
     }
 }
-
 async function handleSaveMaterial(e) {
     e.preventDefault();
     
     try {
         const id = document.getElementById('material-id').value;
+        const tipo = document.getElementById('material-tipo').value;
+        
         const materialData = {
-            tipo: document.getElementById('material-tipo').value,
+            tipo: tipo,
             material: document.getElementById('material-nombre').value,
             stock: parseFloat(document.getElementById('material-stock').value),
             unidad: document.getElementById('material-unidad').value,
@@ -530,7 +531,8 @@ async function handleSaveMaterial(e) {
         };
         
         if (materialData.tipo === 'envase') {
-            materialData.capacidad_litros = parseFloat(document.getElementById('material-capacidad').value) || null;
+            const capacidad = document.getElementById('material-capacidad').value;
+            materialData.capacidad_litros = capacidad ? parseFloat(capacidad) : null;
         }
         
         if (id) {
@@ -553,7 +555,11 @@ async function handleSaveMaterial(e) {
         }
         
         closeModal('material-modal');
-        loadMateriales(currentMaterialTab);
+        
+        // IMPORTANTE: Recargar con el tipo correcto
+        // Asegurarse de que currentMaterialTab esté sincronizado
+        currentMaterialTab = tipo;
+        await loadMateriales(tipo);
         
     } catch (error) {
         console.error('Error guardando material:', error);
@@ -561,50 +567,6 @@ async function handleSaveMaterial(e) {
     }
 }
 
-async function adjustStock(id, nombre) {
-    const cantidad = prompt(`Ajustar stock de "${nombre}"\nIngrese la cantidad a AÑADIR (use números negativos para restar):`);
-    
-    if (cantidad === null) return;
-    
-    const ajuste = parseFloat(cantidad);
-    if (isNaN(ajuste)) {
-        alert('Por favor ingrese un número válido');
-        return;
-    }
-    
-    try {
-        // Obtener stock actual
-        const { data: material, error: fetchError } = await supabase
-            .from('materias_primas')
-            .select('stock')
-            .eq('id', id)
-            .single();
-        
-        if (fetchError) throw fetchError;
-        
-        const nuevoStock = parseFloat(material.stock) + ajuste;
-        
-        if (nuevoStock < 0) {
-            alert('El stock no puede ser negativo');
-            return;
-        }
-        
-        // Actualizar stock
-        const { error: updateError } = await supabase
-            .from('materias_primas')
-            .update({ stock: nuevoStock })
-            .eq('id', id);
-        
-        if (updateError) throw updateError;
-        
-        alert(`Stock actualizado: ${ajuste > 0 ? '+' : ''}${ajuste.toFixed(2)}`);
-        loadMateriales(currentMaterialTab);
-        
-    } catch (error) {
-        console.error('Error ajustando stock:', error);
-        alert('Error al ajustar el stock');
-    }
-}
 
 async function deleteMaterial(id) {
     if (!confirm('¿Está seguro de eliminar este material? Esta acción no se puede deshacer.')) {

@@ -1373,14 +1373,473 @@ filas.forEach(fila => {
     }
 });
 // ============================================
-// MÓDULO: COSTOS
+// MÓDULO: COSTOS Y ANÁLISIS
 // ============================================
 
 async function initCostos() {
-    // Funcionalidad a implementar en siguiente fase
-    console.log('Módulo Costos inicializado');
+    // Establecer mes y año actual por defecto
+    const mesActual = new Date().getMonth() + 1;
+    const añoActual = new Date().getFullYear();
+    
+    const mesSelect = document.getElementById('costos-mes');
+    const añoSelect = document.getElementById('costos-año');
+    
+    if (mesSelect) mesSelect.value = mesActual;
+    if (añoSelect) añoSelect.value = añoActual;
+    
+    await loadCostos();
+    await loadEvolucionFinanciera();
+    
+    // Evento para calcular total en formulario de costos fijos
+    const inputs = ['costo-alquiler', 'costo-servicios', 'costo-salarios', 'costo-seguros', 'costo-mantenimiento'];
+    inputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            input.addEventListener('input', calculateTotalCostosFijos);
+        }
+    });
+    
+    // Evento submit del formulario
+    const form = document.getElementById('costos-fijos-form');
+    if (form) {
+        form.addEventListener('submit', handleSaveCostosFijos);
+    }
 }
 
+async function loadCostos() {
+    try {
+        const mes = parseInt(document.getElementById('costos-mes').value);
+        const año = parseInt(document.getElementById('costos-año').value);
+        const primerDia = new Date(año, mes - 1, 1).toISOString().split('T')[0];
+        const ultimoDia = new Date(año, mes, 0).toISOString().split('T')[0];
+        
+        // Cargar ventas del período
+        const { data: ventas, error: ventasError } = await supabase
+            .from('ventas')
+            .select('*')
+            .gte('fecha', primerDia)
+            .lte('fecha', ultimoDia);
+        
+        if (ventasError) throw ventasError;
+        
+        const totalIngresos = ventas?.reduce((sum, v) => 
+            sum + (parseFloat(v.cantidad || 0) * parseFloat(v.precio_unitario || 0)), 0) || 0;
+        
+        // Cargar costos variables (producción)
+        const { data: produccion, error: produccionError } = await supabase
+            .from('produccion')
+            .select('costo')
+            .eq('confirmado', true)
+            .gte('fecha', primerDia)
+            .lte('fecha', ultimoDia);
+        
+        if (produccionError) throw produccionError;
+        
+        const totalCostosVariables = produccion?.reduce((sum, p) => 
+            sum + parseFloat(p.costo || 0), 0) || 0;
+        
+        // Cargar costos fijos
+        const { data: costosFijos, error: costosError } = await supabase
+            .from('costos_fijos')
+            .select('*')
+            .eq('mes', mes)
+            .eq('año', año);
+        
+        if (costosError) throw costosError;
+        
+        const totalCostosFijos = costosFijos?.reduce((sum, c) => 
+            sum + parseFloat(c.monto || 0), 0) || 0;
+        
+        // Calcular márgenes
+        const margenBruto = totalIngresos - totalCostosVariables;
+        const margenNeto = margenBruto - totalCostosFijos;
+        const porcentajeMargenBruto = totalIngresos > 0 ? (margenBruto / totalIngresos * 100) : 0;
+        const porcentajeMargenNeto = totalIngresos > 0 ? (margenNeto / totalIngresos * 100) : 0;
+        
+        // Punto de equilibrio (costos fijos / margen de contribución %)
+        const margenContribucion = totalIngresos > 0 ? (margenBruto / totalIngresos) : 0;
+        const puntoEquilibrio = margenContribucion > 0 ? (totalCostosFijos / margenContribucion) : 0;
+        
+        // Actualizar KPIs principales
+        document.getElementById('total-ingresos').textContent = totalIngresos.toFixed(2) + ' €';
+        document.getElementById('total-costos-variables').textContent = totalCostosVariables.toFixed(2) + ' €';
+        document.getElementById('total-costos-fijos').textContent = totalCostosFijos.toFixed(2) + ' €';
+        
+        const margenNetoEl = document.getElementById('margen-neto');
+        margenNetoEl.textContent = margenNeto.toFixed(2) + ' €';
+        margenNetoEl.className = `text-3xl font-bold ${margenNeto >= 0 ? 'text-green-600' : 'text-red-600'}`;
+        
+        // Actualizar desglose
+        document.getElementById('desglose-ingresos').textContent = totalIngresos.toFixed(2) + ' €';
+        document.getElementById('desglose-variables').textContent = totalCostosVariables.toFixed(2) + ' €';
+        document.getElementById('desglose-fijos').textContent = totalCostosFijos.toFixed(2) + ' €';
+        document.getElementById('desglose-margen-bruto').textContent = margenBruto.toFixed(2) + ' €';
+        document.getElementById('desglose-margen-neto').textContent = margenNeto.toFixed(2) + ' €';
+        document.getElementById('desglose-margen-bruto-pct').textContent = porcentajeMargenBruto.toFixed(1) + '%';
+        document.getElementById('desglose-margen-neto-pct').textContent = porcentajeMargenNeto.toFixed(1) + '%';
+        document.getElementById('punto-equilibrio').textContent = puntoEquilibrio.toFixed(2) + ' €';
+        
+        // Cargar tabla de costos fijos
+        await loadCostosFijosTable(mes, año, costosFijos);
+        
+        // Cargar análisis por producto
+        await loadAnalisisProductos(ventas, mes, año);
+        
+    } catch (error) {
+        console.error('Error cargando costos:', error);
+    }
+}
+
+async function loadCostosFijosTable(mes, año, costosFijos) {
+    const container = document.getElementById('costos-fijos-table');
+    
+    const conceptos = [
+        'Alquiler nave',
+        'Servicios (luz, agua, gas)',
+        'Salarios',
+        'Seguros',
+        'Mantenimiento'
+    ];
+    
+    let html = '<div class="space-y-2">';
+    let total = 0;
+    
+    conceptos.forEach(concepto => {
+        const costo = costosFijos?.find(c => c.concepto === concepto);
+        const monto = costo ? parseFloat(costo.monto) : 0;
+        total += monto;
+        
+        html += `
+            <div class="flex justify-between items-center py-2 border-b">
+                <span class="text-sm text-gray-700">${concepto}</span>
+                <span class="font-semibold text-gray-900">${monto.toFixed(2)} €</span>
+            </div>
+        `;
+    });
+    
+    html += `
+        <div class="flex justify-between items-center py-3 bg-red-50 px-3 rounded-lg mt-3">
+            <span class="font-bold text-gray-800">TOTAL</span>
+            <span class="text-xl font-bold text-red-600">${total.toFixed(2)} €</span>
+        </div>
+    `;
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+async function loadAnalisisProductos(ventas, mes, año) {
+    try {
+        if (!ventas || ventas.length === 0) {
+            document.getElementById('analisis-productos-table').innerHTML = 
+                '<p class="text-gray-500 text-center py-4">No hay ventas en este período</p>';
+            return;
+        }
+        
+        const primerDia = new Date(año, mes - 1, 1).toISOString().split('T')[0];
+        const ultimoDia = new Date(año, mes, 0).toISOString().split('T')[0];
+        
+        // Agrupar ventas por estilo
+        const ventasPorEstilo = ventas.reduce((acc, v) => {
+            const estilo = v.estilo;
+            if (!acc[estilo]) {
+                acc[estilo] = {
+                    unidades: 0,
+                    ingresos: 0
+                };
+            }
+            acc[estilo].unidades += parseInt(v.cantidad || 0);
+            acc[estilo].ingresos += parseFloat(v.cantidad || 0) * parseFloat(v.precio_unitario || 0);
+            return acc;
+        }, {});
+        
+        // Obtener costos de producción por estilo
+        const { data: produccion } = await supabase
+            .from('produccion')
+            .select('*')
+            .eq('confirmado', true)
+            .gte('fecha', primerDia)
+            .lte('fecha', ultimoDia);
+        
+        const costosPorEstilo = produccion?.reduce((acc, p) => {
+            const estilo = p.estilo_cerveza;
+            if (!acc[estilo]) {
+                acc[estilo] = 0;
+            }
+            acc[estilo] += parseFloat(p.costo || 0);
+            return acc;
+        }, {}) || {};
+        
+        // Calcular total de ingresos
+        const totalIngresos = Object.values(ventasPorEstilo).reduce((sum, v) => sum + v.ingresos, 0);
+        
+        // Generar tabla
+        let html = `
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estilo</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unidades</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingresos</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Costos Prod.</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Margen</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% Total</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+        `;
+        
+        Object.keys(ventasPorEstilo).sort().forEach(estilo => {
+            const datos = ventasPorEstilo[estilo];
+            const costos = costosPorEstilo[estilo] || 0;
+            const margen = datos.ingresos - costos;
+            const porcentaje = totalIngresos > 0 ? (datos.ingresos / totalIngresos * 100) : 0;
+            const margenColor = margen >= 0 ? 'text-green-600' : 'text-red-600';
+            
+            html += `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${estilo}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${datos.unidades.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">${datos.ingresos.toFixed(2)} €</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${costos.toFixed(2)} €</td>
+                    <td class="px-4 py-3 text-sm font-bold ${margenColor}">${margen.toFixed(2)} €</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${porcentaje.toFixed(1)}%</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        document.getElementById('analisis-productos-table').innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error en análisis por producto:', error);
+    }
+}
+
+async function loadEvolucionFinanciera() {
+    try {
+        const meses = [];
+        const dataIngresos = [];
+        const dataCostos = [];
+        const dataMargen = [];
+        
+        const añoActual = new Date().getFullYear();
+        
+        for (let i = 5; i >= 0; i--) {
+            const fecha = new Date();
+            fecha.setMonth(fecha.getMonth() - i);
+            const mes = fecha.getMonth() + 1;
+            const año = fecha.getFullYear();
+            const primerDia = new Date(año, mes - 1, 1).toISOString().split('T')[0];
+            const ultimoDia = new Date(año, mes, 0).toISOString().split('T')[0];
+            
+            meses.push(fecha.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }));
+            
+            // Ventas
+            const { data: ventas } = await supabase
+                .from('ventas')
+                .select('cantidad, precio_unitario')
+                .gte('fecha', primerDia)
+                .lte('fecha', ultimoDia);
+            
+            const ingresos = ventas?.reduce((sum, v) => 
+                sum + (parseFloat(v.cantidad || 0) * parseFloat(v.precio_unitario || 0)), 0) || 0;
+            
+            // Costos variables
+            const { data: produccion } = await supabase
+                .from('produccion')
+                .select('costo')
+                .eq('confirmado', true)
+                .gte('fecha', primerDia)
+                .lte('fecha', ultimoDia);
+            
+            const costosVar = produccion?.reduce((sum, p) => 
+                sum + parseFloat(p.costo || 0), 0) || 0;
+            
+            // Costos fijos
+            const { data: costosFijos } = await supabase
+                .from('costos_fijos')
+                .select('monto')
+                .eq('mes', mes)
+                .eq('año', año);
+            
+            const costosFij = costosFijos?.reduce((sum, c) => 
+                sum + parseFloat(c.monto || 0), 0) || 0;
+            
+            const costosTotales = costosVar + costosFij;
+            const margen = ingresos - costosTotales;
+            
+            dataIngresos.push(ingresos);
+            dataCostos.push(costosTotales);
+            dataMargen.push(margen);
+}
+
+    const ctx = document.getElementById('chart-evolucion-financiera');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: meses,
+                datasets: [
+                    {
+                        label: 'Ingresos',
+                        data: dataIngresos,
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Costos Totales',
+                        data: dataCostos,
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Margen Neto',
+                        data: dataMargen,
+                        borderColor: 'rgba(139, 92, 246, 1)',
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' €';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+} catch (error) {
+    console.error('Error cargando evolución financiera:', error);
+}
+}
+
+async function openEditCostosFijosModal() {
+const mes = parseInt(document.getElementById('costos-mes').value);
+const año = parseInt(document.getElementById('costos-año').value);
+
+const mesesNombres = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+document.getElementById('periodo-costos-fijos').textContent = `${mesesNombres[mes - 1]} ${año}`;
+
+try {
+    const { data: costosFijos } = await supabase
+        .from('costos_fijos')
+        .select('*')
+        .eq('mes', mes)
+        .eq('año', año);
+    
+    const getCosto = (concepto) => {
+        const costo = costosFijos?.find(c => c.concepto === concepto);
+        return costo ? parseFloat(costo.monto) : 0;
+    };
+    
+    document.getElementById('costo-alquiler').value = getCosto('Alquiler nave');
+    document.getElementById('costo-servicios').value = getCosto('Servicios (luz, agua, gas)');
+    document.getElementById('costo-salarios').value = getCosto('Salarios');
+    document.getElementById('costo-seguros').value = getCosto('Seguros');
+    document.getElementById('costo-mantenimiento').value = getCosto('Mantenimiento');
+    
+    calculateTotalCostosFijos();
+    
+} catch (error) {
+    console.error('Error cargando costos fijos:', error);
+}
+
+openModal('costos-fijos-modal');
+}
+
+function calculateTotalCostosFijos() {
+const alquiler = parseFloat(document.getElementById('costo-alquiler').value) || 0;
+const servicios = parseFloat(document.getElementById('costo-servicios').value) || 0;
+const salarios = parseFloat(document.getElementById('costo-salarios').value) || 0;
+const seguros = parseFloat(document.getElementById('costo-seguros').value) || 0;
+const mantenimiento = parseFloat(document.getElementById('costo-mantenimiento').value) || 0;
+
+const total = alquiler + servicios + salarios + seguros + mantenimiento;
+document.getElementById('total-costos-fijos-form').textContent = total.toFixed(2) + ' €';
+}
+
+async function handleSaveCostosFijos(e) {
+e.preventDefault();
+
+try {
+    const mes = parseInt(document.getElementById('costos-mes').value);
+    const año = parseInt(document.getElementById('costos-año').value);
+    
+    const costosFijos = [
+        { concepto: 'Alquiler nave', monto: parseFloat(document.getElementById('costo-alquiler').value) },
+        { concepto: 'Servicios (luz, agua, gas)', monto: parseFloat(document.getElementById('costo-servicios').value) },
+        { concepto: 'Salarios', monto: parseFloat(document.getElementById('costo-salarios').value) },
+        { concepto: 'Seguros', monto: parseFloat(document.getElementById('costo-seguros').value) },
+        { concepto: 'Mantenimiento', monto: parseFloat(document.getElementById('costo-mantenimiento').value) }
+    ];
+    
+    // Eliminar registros existentes
+    await supabase
+        .from('costos_fijos')
+        .delete()
+        .eq('mes', mes)
+        .eq('año', año);
+    
+    // Insertar nuevos
+    const registros = costosFijos.map(c => ({
+        concepto: c.concepto,
+        monto: c.monto,
+        mes: mes,
+        año: año
+    }));
+    
+    const { error } = await supabase
+        .from('costos_fijos')
+        .insert(registros);
+    
+    if (error) throw error;
+    
+    alert('✅ Costos fijos actualizados correctamente');
+    
+    closeModal('costos-fijos-modal');
+    await loadCostos();
+    await loadEvolucionFinanciera();
+    
+    // Actualizar dashboard si está visible
+    if (currentView === 'dashboard') {
+        initDashboard();
+    }
+    
+} catch (error) {
+    console.error('Error guardando costos fijos:', error);
+    alert('Error al guardar los costos fijos: ' + error.message);
+}
+}
+
+function exportarReporteMensual() {
+alert('📄 Función de exportación a PDF:\n\nEsta característica requiere una librería adicional (jsPDF).\n\nPara implementarla, necesitarías:\n1. Añadir la librería jsPDF al index.html\n2. Generar el PDF con los datos del período seleccionado\n\nPor ahora, puedes:\n- Imprimir esta página (Ctrl+P)\n- Hacer capturas de pantalla\n- Copiar los datos manualmente');
+}    
 // ============================================
 // MÓDULO: RECETAS
 // ============================================

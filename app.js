@@ -2403,7 +2403,256 @@ function getVentasHTML() {
 }
 
 function getCostosHTML() {
-    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-calculator text-pagoa-green mr-3"></i>Costos y Análisis</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+    return `
+        <div class="fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-calculator text-pagoa-green mr-3"></i>Costos y Análisis
+                </h1>
+                <div class="flex space-x-3">
+                    <button onclick="exportarReporteMensual()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-file-pdf mr-2"></i>Exportar PDF
+                    </button>
+                    <button onclick="loadCostos()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Selector de Mes/Año -->
+            <div class="bg-white p-6 rounded-lg card-shadow mb-6">
+                <div class="flex items-center space-x-4">
+                    <label class="text-sm font-medium text-gray-700">Analizar Período:</label>
+                    <select id="costos-mes" onchange="loadCostos()" class="px-4 py-2 border rounded-lg">
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                    <select id="costos-año" onchange="loadCostos()" class="px-4 py-2 border rounded-lg">
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Resumen Financiero -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Ingresos por Ventas</p>
+                            <p class="text-3xl font-bold text-green-600" id="total-ingresos">0 €</p>
+                        </div>
+                        <i class="fas fa-euro-sign text-4xl text-green-200"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Costos Variables</p>
+                            <p class="text-3xl font-bold text-orange-600" id="total-costos-variables">0 €</p>
+                        </div>
+                        <i class="fas fa-box text-4xl text-orange-200"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Costos Fijos</p>
+                            <p class="text-3xl font-bold text-red-600" id="total-costos-fijos">0 €</p>
+                        </div>
+                        <i class="fas fa-file-invoice-dollar text-4xl text-red-200"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Margen Neto</p>
+                            <p class="text-3xl font-bold" id="margen-neto">0 €</p>
+                        </div>
+                        <i class="fas fa-chart-line text-4xl text-purple-200"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gráfico de Evolución -->
+            <div class="bg-white p-6 rounded-lg card-shadow mb-8">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Evolución Últimos 6 Meses</h3>
+                <canvas id="chart-evolucion-financiera"></canvas>
+            </div>
+            
+            <!-- Dos Columnas: Costos Fijos y Análisis por Producto -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Costos Fijos -->
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-clipboard-list text-red-600 mr-2"></i>
+                            Costos Fijos Mensuales
+                        </h3>
+                        <button onclick="openEditCostosFijosModal()" class="text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-edit mr-1"></i>Editar
+                        </button>
+                    </div>
+                    <div id="costos-fijos-table">
+                        <p class="text-gray-500 text-center py-4">Cargando...</p>
+                    </div>
+                </div>
+                
+                <!-- Desglose de Márgenes -->
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-chart-pie text-purple-600 mr-2"></i>
+                        Desglose de Márgenes
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="border-b pb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-600">Ingresos Totales</span>
+                                <span class="font-bold text-green-600" id="desglose-ingresos">0 €</span>
+                            </div>
+                        </div>
+                        
+                        <div class="border-b pb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-600">- Costos Variables (Producción)</span>
+                                <span class="font-bold text-orange-600" id="desglose-variables">0 €</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500 ml-4">= Margen Bruto</span>
+                                <span class="font-semibold" id="desglose-margen-bruto">0 €</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs mt-1">
+                                <span class="text-gray-400 ml-4">% sobre Ingresos</span>
+                                <span id="desglose-margen-bruto-pct">0%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="border-b pb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-600">- Costos Fijos</span>
+                                <span class="font-bold text-red-600" id="desglose-fijos">0 €</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500 ml-4">= Margen Neto</span>
+                                <span class="font-semibold" id="desglose-margen-neto">0 €</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs mt-1">
+                                <span class="text-gray-400 ml-4">% sobre Ingresos</span>
+                                <span id="desglose-margen-neto-pct">0%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold text-gray-800">Punto de Equilibrio</span>
+                                <span class="font-bold text-purple-600" id="punto-equilibrio">0 €</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2">Ventas necesarias para cubrir costos fijos</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Análisis por Producto -->
+            <div class="bg-white p-6 rounded-lg card-shadow">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-beer text-pagoa-green mr-2"></i>
+                    Análisis de Rentabilidad por Producto
+                </h3>
+                <div id="analisis-productos-table" class="overflow-x-auto">
+                    <p class="text-gray-500 text-center py-4">Cargando...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal para editar costos fijos -->
+        <div id="costos-fijos-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-2xl font-bold mb-4">Editar Costos Fijos Mensuales</h3>
+                
+                <form id="costos-fijos-form" class="space-y-4">
+                    <p class="text-sm text-gray-600 mb-4">
+                        Período: <span id="periodo-costos-fijos" class="font-semibold"></span>
+                    </p>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Alquiler de Nave (€)</label>
+                        <input type="number" 
+                               step="0.01" 
+                               id="costo-alquiler" 
+                               required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Servicios (luz, agua, gas) (€)</label>
+                        <input type="number" 
+                               step="0.01" 
+                               id="costo-servicios" 
+                               required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Salarios (€)</label>
+                        <input type="number" 
+                               step="0.01" 
+                               id="costo-salarios" 
+                               required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Seguros (€)</label>
+                        <input type="number" 
+                               step="0.01" 
+                               id="costo-seguros" 
+                               required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Mantenimiento (€)</label>
+                        <input type="number" 
+                               step="0.01" 
+                               id="costo-mantenimiento" 
+                               required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="font-medium text-gray-700">Total Costos Fijos:</span>
+                            <span class="text-2xl font-bold text-red-600" id="total-costos-fijos-form">0.00 €</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3 mt-6">
+                        <button type="submit" class="flex-1 bg-pagoa-green text-white py-3 rounded-lg hover:bg-green-800 transition-colors font-semibold">
+                            <i class="fas fa-save mr-2"></i>Guardar Cambios
+                        </button>
+                        <button type="button" onclick="closeModal('costos-fijos-modal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
 }
 
 function getRecetasHTML() {

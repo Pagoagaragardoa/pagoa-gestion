@@ -1233,7 +1233,7 @@ function updateVentaLoteInfo() {
         
         // Actualizar presentaciones disponibles
         const presentacionSelect = document.getElementById('venta-presentacion');
-        presentacionSelect.innerHTML = <option value="${envase}">${envase}</option>;
+        presentacionSelect.innerHTML = `<option value="${envase}">${envase}</option>`;
         presentacionSelect.value = envase;
         
  // Actualizar campo oculto de estilo

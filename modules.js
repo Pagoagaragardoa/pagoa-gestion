@@ -1895,3 +1895,4 @@ document.addEventListener('click', (e) => {
 });
 
 console.log('✅ Modules.js cargado correctamente');
+}

@@ -2163,7 +2163,243 @@ function getProductoTerminadoHTML() {
 }
 
 function getVentasHTML() {
-    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-cash-register text-pagoa-green mr-3"></i>Ventas</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+    return `
+        <div class="fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-cash-register text-pagoa-green mr-3"></i>Ventas
+                </h1>
+                <button onclick="openAddVentaModal()" class="bg-pagoa-green text-white px-4 py-2 rounded-lg hover:bg-green-800 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Registrar Venta
+                </button>
+            </div>
+            
+            <!-- KPIs de Ventas -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Ventas del Mes</p>
+                            <p class="text-3xl font-bold text-green-600" id="ventas-mes">0 €</p>
+                        </div>
+                        <i class="fas fa-euro-sign text-4xl text-green-200"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Unidades Vendidas</p>
+                            <p class="text-3xl font-bold text-blue-600" id="unidades-vendidas-mes">0</p>
+                        </div>
+                        <i class="fas fa-box text-4xl text-blue-200"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Precio Medio</p>
+                            <p class="text-3xl font-bold text-purple-600" id="precio-medio">0 €</p>
+                        </div>
+                        <i class="fas fa-tag text-4xl text-purple-200"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Total Clientes</p>
+                            <p class="text-3xl font-bold text-orange-600" id="total-clientes">0</p>
+                        </div>
+                        <i class="fas fa-users text-4xl text-orange-200"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Gráficos de Análisis -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Ventas por Canal</h3>
+                    <canvas id="chart-ventas-canal"></canvas>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Ventas por Estilo</h3>
+                    <canvas id="chart-ventas-estilo"></canvas>
+                </div>
+            </div>
+            
+            <!-- Filtros y Tabla -->
+            <div class="bg-white rounded-lg card-shadow">
+                <div class="p-6">
+                    <div class="flex flex-wrap gap-4 mb-6">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Canal</label>
+                            <select id="filter-canal-ventas" onchange="filterVentas()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">Todos los canales</option>
+                                <option value="Hostelería">Hostelería</option>
+                                <option value="Tienda Online">Tienda Online</option>
+                                <option value="Distribuidores">Distribuidores</option>
+                                <option value="Eventos">Eventos</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Estilo</label>
+                            <select id="filter-estilo-ventas" onchange="filterVentas()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">Todos los estilos</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Mes</label>
+                            <select id="filter-mes-ventas" onchange="filterVentas()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-end">
+                            <button onclick="loadVentas()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm transition-colors">
+                                <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="ventas-table-container" class="overflow-x-auto">
+                        <p class="text-gray-500 text-center py-8">Cargando ventas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal para registrar venta -->
+        <div id="venta-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-2xl font-bold mb-4" id="venta-modal-title">Registrar Venta</h3>
+                
+                <form id="venta-form" class="space-y-4">
+                    <input type="hidden" id="venta-id">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha *</label>
+                        <input type="date" 
+                               id="venta-fecha" 
+                               required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Lote *</label>
+                            <select id="venta-lote" 
+                                    required 
+                                    onchange="updateVentaLoteInfo()"
+                                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                                <option value="">Seleccione un lote...</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Presentación *</label>
+                            <select id="venta-presentacion" 
+                                    required
+                                    onchange="updateStockDisponible()"
+                                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                                <option value="">Seleccione presentación...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4" id="info-lote" style="display:none;">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Estilo: <span id="info-estilo" class="text-blue-600"></span></p>
+                                <p class="text-sm text-gray-600 mt-1">Stock disponible: <span id="info-stock" class="font-bold text-green-600"></span> unidades</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Cliente *</label>
+                        <input type="text" 
+                               id="venta-cliente" 
+                               required 
+                               list="clientes-datalist"
+                               placeholder="Nombre del cliente"
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                        <datalist id="clientes-datalist"></datalist>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad (unidades) *</label>
+                            <input type="number" 
+                                   id="venta-cantidad" 
+                                   required 
+                                   min="1"
+                                   onchange="calculateTotalVenta()"
+                                   placeholder="0"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Precio Unitario (€) *</label>
+                            <input type="number" 
+                                   step="0.01" 
+                                   id="venta-precio" 
+                                   required 
+                                   min="0"
+                                   onchange="calculateTotalVenta()"
+                                   placeholder="0.00"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                        </div>
+                    </div>
+                    
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-gray-600">Total de la Venta</p>
+                            <p class="text-2xl font-bold text-green-600" id="total-venta">0.00 €</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Canal *</label>
+                            <select id="venta-canal" 
+                                    required
+                                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                                <option value="">Seleccione...</option>
+                                <option value="Hostelería">Hostelería</option>
+                                <option value="Tienda Online">Tienda Online</option>
+                                <option value="Distribuidores">Distribuidores</option>
+                                <option value="Eventos">Eventos</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Caja</label>
+                            <input type="text" 
+                                   id="venta-tipo-caja" 
+                                   placeholder="Ej: Caja 24 unidades"
+                                   class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3 mt-6">
+                        <button type="submit" class="flex-1 bg-pagoa-green text-white py-3 rounded-lg hover:bg-green-800 transition-colors font-semibold">
+                            <i class="fas fa-save mr-2"></i>Registrar Venta
+                        </button>
+                        <button type="button" onclick="closeModal('venta-modal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
 }
 
 function getCostosHTML() {

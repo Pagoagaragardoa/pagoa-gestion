@@ -609,8 +609,23 @@ async function deleteMaterial(id) {
 // ============================================
 
 async function initProduccion() {
-    // Funcionalidad a implementar en siguiente fase
-    console.log('Módulo Producción inicializado');
+    // Establecer fecha de hoy por defecto
+    const hoy = new Date().toISOString().split('T')[0];
+    const fechaInput = document.getElementById('produccion-fecha');
+    if (fechaInput) {
+        fechaInput.value = hoy;
+    }
+    
+    await loadProduccionOperaciones();
+    await loadMesesForFilter();
+    await loadEstilosForProduccion();
+    await loadEnvasesForProduccion();
+    
+    // Evento submit del formulario
+    const form = document.getElementById('produccion-form');
+    if (form) {
+        form.addEventListener('submit', handleSaveProduccion);
+    }
 }
 
 // ============================================
@@ -1947,8 +1962,34 @@ alert('📄 Función de exportación a PDF:\n\nEsta característica requiere una
 // ============================================
 
 async function initRecetas() {
-    // Funcionalidad a implementar en siguiente fase
-    console.log('Módulo Recetas inicializado');
+    await loadRecetas();
+    await loadEstilosForFilter();
+    await loadIngredientesForReceta();
+    
+    // Evento para cambiar unidad según ingrediente seleccionado
+    const ingredienteSelect = document.getElementById('receta-ingrediente');
+    if (ingredienteSelect) {
+        ingredienteSelect.addEventListener('change', async (e) => {
+            const materialId = e.target.value;
+            if (materialId) {
+                const { data } = await supabase
+                    .from('materias_primas')
+                    .select('unidad')
+                    .eq('id', materialId)
+                    .single();
+                
+                if (data) {
+                    document.getElementById('receta-unidad').value = data.unidad;
+                }
+            }
+        });
+    }
+    
+    // Evento submit del formulario
+    const form = document.getElementById('receta-form');
+    if (form) {
+        form.addEventListener('submit', handleSaveReceta);
+    }
 }
 
 // ============================================
@@ -2121,8 +2162,26 @@ async function loadHistorial() {
 // ============================================
 
 async function initConfiguracion() {
-    // Funcionalidad a implementar en siguiente fase
-    console.log('Módulo Configuración inicializado');
+    // Cargar configuración desde localStorage (temporal)
+    const cfg = JSON.parse(localStorage.getItem('pagoa_config') || '{}');
+
+    const empresaInput = document.getElementById('config-empresa');
+    const monedaInput = document.getElementById('config-moneda');
+    const contactoInput = document.getElementById('config-contacto');
+
+    if (empresaInput) empresaInput.value = cfg.empresa || '';
+    if (monedaInput) monedaInput.value = cfg.moneda || '€';
+    if (contactoInput) contactoInput.value = cfg.contacto || '';
+
+    document.getElementById('config-save-btn')?.addEventListener('click', (e) => {
+        const nuevaCfg = {
+            empresa: empresaInput?.value || '',
+            moneda: monedaInput?.value || '€',
+            contacto: contactoInput?.value || ''
+        };
+        localStorage.setItem('pagoa_config', JSON.stringify(nuevaCfg));
+        alert('Configuración guardada (local).');
+    });
 }
 
 // ============================================

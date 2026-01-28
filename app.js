@@ -3052,7 +3052,32 @@ function getHistorialHTML() {
 }
 
 function getConfiguracionHTML() {
-    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-cog text-pagoa-green mr-3"></i>Configuración</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+    return `
+    <div class="fade-in">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-cog text-pagoa-green mr-3"></i>Configuración
+        </h1>
+
+        <div class="bg-white rounded-lg p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Nombre de la Empresa</label>
+                    <input id="config-empresa" class="w-full px-3 py-2 border rounded-lg" placeholder="Pagoa Cervecería">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Moneda</label>
+                    <input id="config-moneda" class="w-full px-3 py-2 border rounded-lg" placeholder="€">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Email de Contacto</label>
+                    <input id="config-contacto" class="w-full px-3 py-2 border rounded-lg" placeholder="info@pagoa.local">
+                </div>
+                <div class="flex items-end">
+                    <button id="config-save-btn" class="bg-pagoa-green text-white px-4 py-2 rounded-lg">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>`;
 }
 
 // ============================================

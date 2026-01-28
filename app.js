@@ -274,7 +274,37 @@ function loadView(viewName) {
             initMateriasPrimas();
             break;
         case 'produccion':
-            contentArea.innerHTML = function getProduccionHTML() {
+            contentArea.innerHTML = getProduccionHTML();
+            initProduccion();
+            break;
+        case 'producto-terminado':
+            contentArea.innerHTML = getProductoTerminadoHTML();
+            initProductoTerminado();
+            break;
+        case 'ventas':
+            contentArea.innerHTML = getVentasHTML();
+            initVentas();
+            break;
+        case 'costos':
+            contentArea.innerHTML = getCostosHTML();
+            initCostos();
+            break;
+        case 'recetas':
+            contentArea.innerHTML = getRecetasHTML();
+            initRecetas();
+            break;
+        case 'historial':
+            contentArea.innerHTML = getHistorialHTML();
+            initHistorial();
+            break;
+        case 'configuracion':
+            contentArea.innerHTML = getConfiguracionHTML();
+            initConfiguracion();
+            break;
+    }
+}
+
+function getProduccionHTML() {
     return `
         <div class="fade-in">
             <div class="flex justify-between items-center mb-6">
@@ -511,13 +541,11 @@ function loadView(viewName) {
             </div>
         </div>
     `;
-};
-            // ============================================
-// MÓDULO: PRODUCCIÓN
-// ============================================
+}
 
-let currentProduccionTab = 'operaciones';
-let recetaActual = null;
+// ============================================
+// INICIALIZADORES Y FUNCIONES DE MÓDULOS
+// ============================================
 
 async function initProduccion() {
     // Establecer fecha de hoy por defecto
@@ -538,6 +566,9 @@ async function initProduccion() {
         form.addEventListener('submit', handleSaveProduccion);
     }
 }
+
+let currentProduccionTab = 'operaciones';
+let recetaActual = null;
 
 function switchProduccionTab(tab) {
     currentProduccionTab = tab;
@@ -1289,137 +1320,8 @@ function filterProduccion() {
         }
     });
 }
-            break;
-        case 'producto-terminado':
-            contentArea.innerHTML = getProductoTerminadoHTML();
-            initProductoTerminado();
-            break;
-        case 'ventas':
-            contentArea.innerHTML = getVentasHTML();
-            initVentas();
-            break;
-        case 'costos':
-            contentArea.innerHTML = getCostosHTML();
-            initCostos();
-            break;
-        case 'recetas':
-            contentArea.innerHTML = function getRecetasHTML() {
-    return `
-        <div class="fade-in">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-3xl font-bold text-gray-800">
-                    <i class="fas fa-book text-pagoa-green mr-3"></i>Recetas
-                </h1>
-                <button onclick="openAddRecetaModal()" class="bg-pagoa-green text-white px-4 py-2 rounded-lg hover:bg-green-800 transition-colors">
-                    <i class="fas fa-plus mr-2"></i>Nueva Receta
-                </button>
-            </div>
-            
-            <!-- Selector de Estilo -->
-            <div class="bg-white p-6 rounded-lg card-shadow mb-6">
-                <div class="flex items-center space-x-4">
-                    <label class="text-sm font-medium text-gray-700">Filtrar por Estilo:</label>
-                    <select id="filter-estilo-recetas" onchange="filterRecetasByEstilo()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600">
-                        <option value="">Todos los estilos</option>
-                    </select>
-                    <button onclick="loadRecetas()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition-colors">
-                        <i class="fas fa-sync-alt mr-2"></i>Actualizar
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Lista de Recetas por Estilo -->
-            <div id="recetas-container">
-                <p class="text-gray-500 text-center py-8">Cargando recetas...</p>
-            </div>
-        </div>
-        
-        <!-- Modal para añadir/editar receta -->
-        <div id="receta-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-            <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-                <h3 class="text-2xl font-bold mb-4" id="receta-modal-title">Nueva Receta</h3>
-                
-                <form id="receta-form" class="space-y-4">
-                    <input type="hidden" id="receta-id">
-                    
-                    <!-- Estilo de Cerveza -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Estilo de Cerveza *</label>
-                        <input type="text" 
-                               id="receta-estilo" 
-                               required 
-                               list="estilos-datalist"
-                               placeholder="Ej: IPA, Stout, Lager..."
-                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
-                        <datalist id="estilos-datalist">
-                            <option value="IPA">
-                            <option value="Pale Ale">
-                            <option value="Stout">
-                            <option value="Porter">
-                            <option value="Lager">
-                            <option value="Pilsner">
-                            <option value="Wheat Beer">
-                            <option value="Belgian Ale">
-                            <option value="Amber Ale">
-                            <option value="Brown Ale">
-                        </datalist>
-                    </div>
-                    
-                    <!-- Tipo de Operación -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Operación *</label>
-                        <select id="receta-tipo-operacion" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
-                            <option value="Elaboración de mosto">Elaboración de mosto</option>
-                            <option value="Envasado">Envasado</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Ingrediente -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Ingrediente/Material *</label>
-                        <select id="receta-ingrediente" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
-                            <option value="">Seleccione un material...</option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Si no aparece, añádalo primero en Materias Primas</p>
-                    </div>
-                    
-                    <!-- Cantidad por 100L -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad por 100L *</label>
-                            <input type="number" 
-                                   step="0.01" 
-                                   id="receta-cantidad" 
-                                   required 
-                                   placeholder="0.00"
-                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Unidad *</label>
-                            <input type="text" 
-                                   id="receta-unidad" 
-                                   required 
-                                   readonly
-                                   placeholder="kg"
-                                   class="w-full px-4 py-2 border rounded-lg bg-gray-100">
-                        </div>
-                    </div>
-                    
-                    <div class="flex space-x-3 mt-6">
-                        <button type="submit" class="flex-1 bg-pagoa-green text-white py-2 rounded-lg hover:bg-green-800 transition-colors">
-                            <i class="fas fa-save mr-2"></i>Guardar
-                        </button>
-                        <button type="button" onclick="closeModal('receta-modal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors">
-                            Cancelar
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-};
-       // ============================================
+
+// ============================================
 // MÓDULO: RECETAS
 // ============================================
 
@@ -1841,19 +1743,6 @@ async function deleteEstiloCompleto(estilo) {
         alert('Error al eliminar el estilo');
     }
 };
-            break;
-        case 'historial':
-            contentArea.innerHTML = getHistorialHTML();
-            initHistorial();
-            break;
-        case 'configuracion':
-            contentArea.innerHTML = getConfiguracionHTML();
-            initConfiguracion();
-            break;
-        default:
-            contentArea.innerHTML = '<div class="text-center p-8"><h2 class="text-2xl text-gray-600">Vista no encontrada</h2></div>';
-    }
-}
 
 // ============================================
 // FUNCIONES HTML DE VISTAS (Placeholder)

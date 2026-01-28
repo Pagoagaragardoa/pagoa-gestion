@@ -3058,7 +3058,11 @@ function getConfiguracionHTML() {
             <i class="fas fa-cog text-pagoa-green mr-3"></i>Configuración
         </h1>
 
+        <!-- Configuración de Empresa -->
         <div class="bg-white rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                <i class="fas fa-building text-pagoa-green mr-2"></i>Datos de la Empresa
+            </h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm text-gray-600 mb-1">Nombre de la Empresa</label>
@@ -3073,9 +3077,38 @@ function getConfiguracionHTML() {
                     <input id="config-contacto" class="w-full px-3 py-2 border rounded-lg" placeholder="info@pagoa.local">
                 </div>
                 <div class="flex items-end">
-                    <button id="config-save-btn" class="bg-pagoa-green text-white px-4 py-2 rounded-lg">Guardar</button>
+                    <button id="config-save-btn" class="bg-pagoa-green text-white px-4 py-2 rounded-lg hover:bg-green-800 transition">Guardar</button>
                 </div>
             </div>
+        </div>
+
+        <!-- Cambiar Contraseña -->
+        <div class="bg-white rounded-lg p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">
+                <i class="fas fa-lock text-pagoa-green mr-2"></i>Cambiar Contraseña
+            </h2>
+            <form id="change-password-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Nueva Contraseña *</label>
+                        <input type="password" id="new-password" required placeholder="••••••••" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                        <p class="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Confirmar Contraseña *</label>
+                        <input type="password" id="confirm-password" required placeholder="••••••••" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-key mr-2"></i>Cambiar Contraseña
+                    </button>
+                    <button type="reset" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition">
+                        Limpiar
+                    </button>
+                </div>
+                <div id="password-message" class="hidden p-3 rounded-lg text-sm"></div>
+            </form>
         </div>
     </div>`;
 }

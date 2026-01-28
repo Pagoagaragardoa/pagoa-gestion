@@ -2183,6 +2183,7 @@ async function initConfiguracion() {
         if (monedaInput) monedaInput.value = cfg?.moneda || '€';
         if (contactoInput) contactoInput.value = cfg?.contacto || '';
 
+        // Guardar configuración
         document.getElementById('config-save-btn')?.addEventListener('click', async (e) => {
             try {
                 const nuevaCfg = {
@@ -2205,6 +2206,59 @@ async function initConfiguracion() {
                 alert('Error al guardar en Supabase. Asegúrate de crear la tabla `configuracion`.');
             }
         });
+
+        // Cambiar contraseña
+        const changePasswordForm = document.getElementById('change-password-form');
+        if (changePasswordForm) {
+            changePasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                try {
+                    const newPassword = document.getElementById('new-password').value;
+                    const confirmPassword = document.getElementById('confirm-password').value;
+                    const msgDiv = document.getElementById('password-message');
+
+                    // Validar que las contraseñas coincidan
+                    if (newPassword !== confirmPassword) {
+                        msgDiv.classList.remove('hidden', 'bg-green-50', 'text-green-700');
+                        msgDiv.classList.add('bg-red-50', 'text-red-700');
+                        msgDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>Las contraseñas no coinciden';
+                        return;
+                    }
+
+                    // Validar longitud mínima
+                    if (newPassword.length < 6) {
+                        msgDiv.classList.remove('hidden', 'bg-green-50', 'text-green-700');
+                        msgDiv.classList.add('bg-red-50', 'text-red-700');
+                        msgDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i>La contraseña debe tener al menos 6 caracteres';
+                        return;
+                    }
+
+                    // Actualizar contraseña en Supabase Auth
+                    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+                    if (error) throw error;
+
+                    msgDiv.classList.remove('hidden', 'bg-red-50', 'text-red-700');
+                    msgDiv.classList.add('bg-green-50', 'text-green-700');
+                    msgDiv.innerHTML = '<i class="fas fa-check-circle mr-2"></i>✅ Contraseña actualizada correctamente';
+
+                    changePasswordForm.reset();
+
+                    setTimeout(() => {
+                        msgDiv.classList.add('hidden');
+                    }, 5000);
+
+                } catch (error) {
+                    console.error('Error cambiando contraseña:', error.message);
+                    const msgDiv = document.getElementById('password-message');
+                    msgDiv.classList.remove('hidden', 'bg-green-50', 'text-green-700');
+                    msgDiv.classList.add('bg-red-50', 'text-red-700');
+                    msgDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i>Error: ${error.message}`;
+                }
+            });
+        }
+
     } catch (err) {
         console.error('Error inicializando configuración:', err.message);
     }

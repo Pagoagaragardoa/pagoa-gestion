@@ -231,6 +231,22 @@ function showMessage(elementId, type, message) {
     }, 5000);
 }
 
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
 // ============================================
 // SISTEMA DE NAVEGACIÓN Y VISTAS
 // ============================================
@@ -968,6 +984,14 @@ function openAddProduccionModal() {
     openModal('produccion-modal');
 }
 
+function openAddMaterialModal() {
+    document.getElementById('material-modal-title').textContent = 'Añadir Material';
+    document.getElementById('material-form').reset();
+    document.getElementById('material-id').value = '';
+    document.getElementById('material-tipo').value = 'ingrediente';
+    document.getElementById('capacidad-container').classList.add('hidden');
+    openModal('material-modal');
+}
 async function handleSaveProduccion(e) {
     e.preventDefault();
     
@@ -1834,6 +1858,110 @@ async function deleteEstiloCompleto(estilo) {
 // ============================================
 // FUNCIONES HTML DE VISTAS (Placeholder)
 // ============================================
+
+function getMateriasPrimasHTML() {
+    return `
+        <div class="fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-boxes text-pagoa-green mr-3"></i>Materias Primas
+                </h1>
+                <button onclick="openAddMaterialModal()" class="bg-pagoa-green text-white px-4 py-2 rounded-lg hover:bg-green-800 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Añadir Material
+                </button>
+            </div>
+            
+            <!-- Tabs: Ingredientes / Envases -->
+            <div class="bg-white rounded-lg card-shadow mb-6">
+                <div class="flex border-b">
+                    <button onclick="switchMaterialTab('ingredientes')" 
+                            id="tab-ingredientes"
+                            class="px-6 py-3 font-semibold text-pagoa-green border-b-2 border-pagoa-green">
+                        Ingredientes
+                    </button>
+                    <button onclick="switchMaterialTab('envases')" 
+                            id="tab-envases"
+                            class="px-6 py-3 font-semibold text-gray-600 hover:text-pagoa-green">
+                        Envases
+                    </button>
+                </div>
+                
+                <div class="p-6">
+                    <div id="materiales-table">
+                        <p class="text-gray-500 text-center py-8">Cargando inventario...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal para añadir/editar material -->
+        <div id="material-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+                <h3 class="text-2xl font-bold mb-4" id="material-modal-title">Añadir Material</h3>
+                <form id="material-form" class="space-y-4">
+                    <input type="hidden" id="material-id">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                        <select id="material-tipo" required class="w-full px-4 py-2 border rounded-lg">
+                            <option value="ingrediente">Ingrediente</option>
+                            <option value="envase">Envase</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nombre del Material</label>
+                        <input type="text" id="material-nombre" required class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Stock Inicial</label>
+                            <input type="number" step="0.01" id="material-stock" required class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Unidad</label>
+                            <select id="material-unidad" required class="w-full px-4 py-2 border rounded-lg">
+                                <option value="kg">kg</option>
+                                <option value="g">g</option>
+                                <option value="L">L</option>
+                                <option value="mL">mL</option>
+                                <option value="unidades">unidades</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Punto de Reorden</label>
+                            <input type="number" step="0.01" id="material-reorden" required class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Costo Unitario (€)</label>
+                            <input type="number" step="0.01" id="material-costo" required class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                    </div>
+                    
+                    <div id="capacidad-container" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Capacidad (L)</label>
+                        <input type="number" step="0.01" id="material-capacidad" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div class="flex space-x-3 mt-6">
+                        <button type="submit" class="flex-1 bg-pagoa-green text-white py-2 rounded-lg hover:bg-green-800">
+                            Guardar
+                        </button>
+                        <button type="button" onclick="closeModal('material-modal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
 
 function getDashboardHTML() {
     return `

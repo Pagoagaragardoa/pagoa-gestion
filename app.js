@@ -2440,7 +2440,100 @@ function getProduccionHTML() {
 }
 
 function getProductoTerminadoHTML() {
-    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-beer text-pagoa-green mr-3"></i>Producto Terminado</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+    return `
+        <div class="fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-beer text-pagoa-green mr-3"></i>Producto Terminado
+                </h1>
+                <button onclick="loadProductoTerminado()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                </button>
+            </div>
+            
+            <!-- Filtros -->
+            <div class="bg-white p-6 rounded-lg card-shadow mb-6">
+                <div class="flex flex-wrap gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">Filtrar por Estilo</label>
+                        <select id="filter-estilo-producto" onchange="filterProductoTerminado()" class="px-4 py-2 border rounded-lg">
+                            <option value="">Todos los estilos</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">Filtrar por Envase</label>
+                        <select id="filter-envase-producto" onchange="filterProductoTerminado()" class="px-4 py-2 border rounded-lg">
+                            <option value="">Todos los envases</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">Estado</label>
+                        <select id="filter-estado-producto" onchange="filterProductoTerminado()" class="px-4 py-2 border rounded-lg">
+                            <option value="">Todos</option>
+                            <option value="disponible">Con Stock</option>
+                            <option value="agotado">Agotado</option>
+                            <option value="proximo-caducar">Próximo a Caducar</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Resumen de Stock -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Lotes Activos</p>
+                            <p class="text-3xl font-bold text-pagoa-green" id="total-lotes">0</p>
+                        </div>
+                        <i class="fas fa-clipboard-list text-4xl text-green-200"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Total Unidades</p>
+                            <p class="text-3xl font-bold text-blue-600" id="total-unidades">0</p>
+                        </div>
+                        <i class="fas fa-box text-4xl text-blue-200"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Stock Disponible</p>
+                            <p class="text-3xl font-bold text-green-600" id="stock-disponible">0</p>
+                        </div>
+                        <i class="fas fa-check-circle text-4xl text-green-200"></i>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg card-shadow">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600 mb-1">Unidades Vendidas</p>
+                            <p class="text-3xl font-bold text-orange-600" id="total-vendidas">0</p>
+                        </div>
+                        <i class="fas fa-shopping-cart text-4xl text-orange-200"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabla de Producto Terminado -->
+            <div class="bg-white rounded-lg card-shadow">
+                <div class="p-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Inventario de Producto Terminado</h3>
+                    <div id="producto-terminado-table-container" class="overflow-x-auto">
+                        <p class="text-gray-500 text-center py-8">Cargando inventario...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 function getVentasHTML() {

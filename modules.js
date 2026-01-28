@@ -1233,17 +1233,17 @@ function updateVentaLoteInfo() {
         
         // Actualizar presentaciones disponibles
         const presentacionSelect = document.getElementById('venta-presentacion');
-        presentacionSelect.innerHTML = <option value="${envase}">${envase}</option>`;`
-presentacionSelect.value = envase;
+        presentacionSelect.innerHTML = <option value="${envase}">${envase}</option>;
+        presentacionSelect.value = envase;
         
-    // Actualizar campo oculto de estilo
-    const cantidadInput = document.getElementById('venta-cantidad');
-    cantidadInput.max = stock;
-    cantidadInput.placeholder = `Máximo ${stock}`;
-} else {
-    document.getElementById('info-lote').style.display = 'none';
-    document.getElementById('venta-presentacion').innerHTML = '<option value="">Seleccione presentación...</option>';
-}
+ // Actualizar campo oculto de estilo
+        const cantidadInput = document.getElementById('venta-cantidad');
+        cantidadInput.max = stock;
+        cantidadInput.placeholder = `Máximo ${stock}`;
+    } else {
+        document.getElementById('info-lote').style.display = 'none';
+        document.getElementById('venta-presentacion').innerHTML = '<option value="">Seleccione presentación...</option>';
+    }
 }
 function updateStockDisponible() {
 // Ya gestionado en updateVentaLoteInfo

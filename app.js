@@ -2817,7 +2817,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 console.log('✅ App.js cargado correctamente'); {
-    return `
+    
         <div class="fade-in">
             <div class="flex justify-between items-center mb-6">
                 <h1 class="text-3xl font-bold text-gray-800">

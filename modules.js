@@ -621,6 +621,19 @@ async function initProductoTerminado() {
     await loadProductoTerminado();
     await loadEstilosFilterProducto();
     await loadEnvasesFilterProducto();
+    
+    // Event listeners para filtros
+    document.getElementById('filter-estado-producto')?.addEventListener('change', async () => {
+        await filterProductoTerminado();
+    });
+    
+    document.getElementById('filter-estilo-producto')?.addEventListener('change', async () => {
+        await filterProductoTerminado();
+    });
+    
+    document.getElementById('filter-envase-producto')?.addEventListener('change', async () => {
+        await filterProductoTerminado();
+    });
 }
 
 async function loadProductoTerminado() {
@@ -686,6 +699,25 @@ async function loadProductoTerminado() {
         document.getElementById('total-unidades').textContent = totalUnidades.toLocaleString();
         document.getElementById('stock-disponible').textContent = stockDisponible.toLocaleString();
         document.getElementById('total-vendidas').textContent = totalVendidas.toLocaleString();
+        
+        // Mostrar alerta de caducidad
+        const productosCaducando = productosConStock.filter(p => p.dias_hasta_caducidad > 0 && p.dias_hasta_caducidad <= 30);
+        if (productosCaducando.length > 0) {
+            const alertDiv = document.getElementById('caducidad-alert');
+            const listDiv = document.getElementById('caducidad-list');
+            
+            if (alertDiv && listDiv) {
+                alertDiv.classList.remove('hidden');
+                listDiv.innerHTML = productosCaducando.map(p => 
+                    `<div><strong>${p.numero_lote}</strong> (${p.estilo}): Caduca en ${p.dias_hasta_caducidad} días</div>`
+                ).join('');
+            }
+        } else {
+            const alertDiv = document.getElementById('caducidad-alert');
+            if (alertDiv) {
+                alertDiv.classList.add('hidden');
+            }
+        }
         
         // Generar tabla
         let html = `
@@ -880,6 +912,7 @@ async function initVentas() {
     
     await loadVentas();
     await loadVentasCharts();
+    await loadVentasAnalisisDetallado();
     await loadLotesForVentas();
     await loadClientesForVentas();
     await loadEstilosFilterVentas();
@@ -993,6 +1026,73 @@ async function loadVentas() {
         console.error('Error cargando ventas:', error);
         document.getElementById('ventas-table-container').innerHTML = 
             '<p class="text-red-600 text-center py-4">Error al cargar ventas</p>';
+    }
+}
+
+async function loadVentasAnalisisDetallado() {
+    try {
+        const { data: ventas } = await supabase
+            .from('ventas')
+            .select('*');
+        
+        if (!ventas || ventas.length === 0) return;
+        
+        // Análisis por Canal
+        const analisisPorCanal = {};
+        ventas.forEach(v => {
+            const canal = v.canal || 'Sin especificar';
+            const total = parseFloat(v.cantidad || 0) * parseFloat(v.precio_unitario || 0);
+            
+            if (!analisisPorCanal[canal]) {
+                analisisPorCanal[canal] = {
+                    cantidad: 0,
+                    ventas: 0,
+                    transacciones: 0,
+                    ticket_medio: 0
+                };
+            }
+            
+            analisisPorCanal[canal].cantidad += parseInt(v.cantidad || 0);
+            analisisPorCanal[canal].ventas += total;
+            analisisPorCanal[canal].transacciones += 1;
+        });
+        
+        // Calcular ticket medio
+        Object.keys(analisisPorCanal).forEach(canal => {
+            analisisPorCanal[canal].ticket_medio = 
+                analisisPorCanal[canal].transacciones > 0 ? 
+                analisisPorCanal[canal].ventas / analisisPorCanal[canal].transacciones : 0;
+        });
+        
+        // Análisis por Estilo
+        const analisisPorEstilo = {};
+        ventas.forEach(v => {
+            const estilo = v.estilo || 'Sin especificar';
+            const total = parseFloat(v.cantidad || 0) * parseFloat(v.precio_unitario || 0);
+            
+            if (!analisisPorEstilo[estilo]) {
+                analisisPorEstilo[estilo] = {
+                    cantidad: 0,
+                    ventas: 0,
+                    porcentaje: 0
+                };
+            }
+            
+            analisisPorEstilo[estilo].cantidad += parseInt(v.cantidad || 0);
+            analisisPorEstilo[estilo].ventas += total;
+        });
+        
+        // Calcular porcentajes
+        const totalVentasGlobal = Object.values(analisisPorEstilo).reduce((sum, e) => sum + e.ventas, 0);
+        Object.keys(analisisPorEstilo).forEach(estilo => {
+            analisisPorEstilo[estilo].porcentaje = 
+                totalVentasGlobal > 0 ? (analisisPorEstilo[estilo].ventas / totalVentasGlobal * 100) : 0;
+        });
+        
+        console.log('✅ Análisis de ventas generado:', { analisisPorCanal, analisisPorEstilo });
+        
+    } catch (error) {
+        console.error('Error generando análisis de ventas:', error);
     }
 }
 

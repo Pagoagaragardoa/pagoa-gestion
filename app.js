@@ -2287,7 +2287,107 @@ function getProduccionHTML() {
 }
 
 function getProductoTerminadoHTML() {
-    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-beer text-pagoa-green mr-3"></i>Producto Terminado</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+    return `<div class="fade-in">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-beer text-pagoa-green mr-3"></i>Producto Terminado
+        </h1>
+
+        <!-- KPIs -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg card-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Total Lotes</p>
+                        <p class="text-3xl font-bold text-blue-600" id="total-lotes">0</p>
+                    </div>
+                    <i class="fas fa-boxes text-4xl text-blue-200"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg card-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Total Producido</p>
+                        <p class="text-3xl font-bold text-green-600" id="total-unidades">0</p>
+                    </div>
+                    <i class="fas fa-check-circle text-4xl text-green-200"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg card-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Stock Disponible</p>
+                        <p class="text-3xl font-bold text-purple-600" id="stock-disponible">0</p>
+                    </div>
+                    <i class="fas fa-warehouse text-4xl text-purple-200"></i>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg card-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-1">Total Vendido</p>
+                        <p class="text-3xl font-bold text-orange-600" id="total-vendidas">0</p>
+                    </div>
+                    <i class="fas fa-cash-register text-4xl text-orange-200"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alertas de Caducidad -->
+        <div id="caducidad-alert" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 hidden">
+            <div class="flex items-start">
+                <i class="fas fa-exclamation-triangle text-red-600 text-xl mr-3 mt-1"></i>
+                <div>
+                    <h3 class="font-semibold text-red-800 mb-2">Productos a punto de caducar</h3>
+                    <div id="caducidad-list" class="text-sm text-red-700 space-y-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="bg-white rounded-lg card-shadow p-6 mb-6">
+            <div class="flex flex-wrap gap-4">
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Estado</label>
+                    <select id="filter-estado-producto" onchange="filterProductoTerminado()" class="px-3 py-2 border rounded-lg text-sm">
+                        <option value="">Todos</option>
+                        <option value="disponible">Disponible</option>
+                        <option value="agotado">Agotado</option>
+                        <option value="caducado">Caducado</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Estilo</label>
+                    <select id="filter-estilo-producto" onchange="filterProductoTerminado()" class="px-3 py-2 border rounded-lg text-sm">
+                        <option value="">Todos los estilos</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">Envase</label>
+                    <select id="filter-envase-producto" onchange="filterProductoTerminado()" class="px-3 py-2 border rounded-lg text-sm">
+                        <option value="">Todos los envases</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-end">
+                    <button onclick="loadProductoTerminado()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="bg-white rounded-lg card-shadow overflow-hidden">
+            <div id="producto-terminado-table-container" class="overflow-x-auto">
+                <p class="text-gray-500 text-center py-8">Cargando producto terminado...</p>
+            </div>
+        </div>
+    </div>`;
 }
 
 function getVentasHTML() {

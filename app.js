@@ -1933,7 +1933,405 @@ function getDashboardHTML() {
     `;
 }
 
-function getMateriasPrimasHTML() {
+function getProduccionHTML() {
+    return `
+        <div class="fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-industry text-pagoa-green mr-3"></i>Producción
+                </h1>
+                <button onclick="openAddProduccionModal()" class="bg-pagoa-green text-white px-4 py-2 rounded-lg hover:bg-green-800 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Nueva Operación
+                </button>
+            </div>
+            
+            <div class="bg-white rounded-lg card-shadow mb-6">
+                <div class="flex border-b">
+                    <button onclick="switchProduccionTab('operaciones')" 
+                            id="tab-operaciones"
+                            class="px-6 py-3 font-semibold text-pagoa-green border-b-2 border-pagoa-green">
+                        <i class="fas fa-list mr-2"></i>Operaciones
+                    </button>
+                    <button onclick="switchProduccionTab('lotes')" 
+                            id="tab-lotes"
+                            class="px-6 py-3 font-semibold text-gray-600 hover:text-pagoa-green">
+                        <i class="fas fa-clipboard-list mr-2"></i>Resumen de Lotes
+                    </button>
+                </div>
+                
+                <div class="p-6">
+                    <div class="flex flex-wrap gap-4 mb-6">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Tipo de Operación</label>
+                            <select id="filter-tipo-operacion" onchange="filterProduccion()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">Todas</option>
+                                <option value="Elaboración de mosto">Elaboración de mosto</option>
+                                <option value="Envasado">Envasado</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Estado</label>
+                            <select id="filter-estado" onchange="filterProduccion()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">Todos</option>
+                                <option value="true">Confirmados</option>
+                                <option value="false">Pendientes</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Mes</label>
+                            <select id="filter-mes" onchange="filterProduccion()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        
+                        <div class="flex items-end">
+                            <button onclick="loadProduccionOperaciones()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg text-sm transition-colors">
+                                <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="produccion-operaciones-content">
+                        <p class="text-gray-500 text-center py-8">Cargando operaciones...</p>
+                    </div>
+                    
+                    <div id="produccion-lotes-content" class="hidden">
+                        <p class="text-gray-500 text-center py-8">Cargando lotes...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="produccion-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-2xl font-bold mb-4" id="produccion-modal-title">Nueva Operación de Producción</h3>
+                
+                <form id="produccion-form" class="space-y-4">
+                    <input type="hidden" id="produccion-id">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fecha *</label>
+                        <input type="date" 
+                               id="produccion-fecha" 
+                               required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Operación *</label>
+                        <select id="produccion-tipo" required onchange="updateProduccionForm()" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                            <option value="">Seleccione...</option>
+                            <option value="Elaboración de mosto">Elaboración de mosto</option>
+                            <option value="Envasado">Envasado</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Número de Lote *</label>
+                            <input type="text" 
+                                   id="produccion-lote" 
+                                   required 
+                                   placeholder="Ej: L001"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Estilo de Cerveza *</label>
+                            <input type="text" 
+                                   id="produccion-estilo" 
+                                   required 
+                                   list="estilos-produccion-datalist"
+                                   onchange="loadRecetaForEstilo()"
+                                   placeholder="Ej: IPA"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                            <datalist id="estilos-produccion-datalist"></datalist>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Volumen (Litros) *</label>
+                        <input type="number" 
+                               step="0.01" 
+                               id="produccion-volumen" 
+                               required 
+                               onchange="calculateCostoProduccion()"
+                               placeholder="100.00"
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                    </div>
+                    
+                    <div id="envasado-fields" class="hidden space-y-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Envase</label>
+                                <select id="produccion-envase" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Chapa/Tapa</label>
+                                <select id="produccion-chapa" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Etiqueta/Vitola</label>
+                                <select id="produccion-etiqueta" class="w-full px-4 py-2 border rounded-lg">
+                                    <option value="">Seleccione...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ubicación</label>
+                        <input type="text" 
+                               id="produccion-ubicacion" 
+                               placeholder="Ej: Tanque 1, Cámara 2..."
+                               class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Costo Estimado de Materiales</p>
+                                <p class="text-xs text-gray-500 mt-1">Calculado según receta y volumen</p>
+                            </div>
+                            <p class="text-2xl font-bold text-blue-600" id="costo-estimado">0.00 €</p>
+                        </div>
+                    </div>
+                    
+                    <div id="materiales-descuento" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 hidden">
+                        <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                            Materiales que se descontarán del inventario:
+                        </h4>
+                        <div id="lista-materiales-descuento" class="text-sm text-gray-700"></div>
+                    </div>
+                    
+                    <div class="flex space-x-3 mt-6">
+                        <button type="submit" class="flex-1 bg-yellow-500 text-white py-3 rounded-lg hover:bg-yellow-600 transition-colors font-semibold">
+                            <i class="fas fa-save mr-2"></i>Guardar (Sin Confirmar)
+                        </button>
+                        <button type="button" onclick="closeModal('produccion-modal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div id="confirmar-operacion-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+                <h3 class="text-2xl font-bold mb-4 text-red-600">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Confirmar Operación
+                </h3>
+                
+                <div class="mb-6">
+                    <p class="text-gray-700 mb-4">¿Está seguro de confirmar esta operación?</p>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p class="text-sm text-red-800 font-semibold mb-2">Esta acción:</p>
+                        <ul class="text-sm text-red-700 list-disc list-inside space-y-1">
+                            <li>Descontará materiales del inventario</li>
+                            <li>Registrará la operación en el historial</li>
+                            <li>NO podrá editarse después</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <input type="hidden" id="confirmar-operacion-id">
+                
+                <div class="flex space-x-3">
+                    <button onclick="confirmarOperacion()" class="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                        <i class="fas fa-check mr-2"></i>Sí, Confirmar
+                    </button>
+                    <button onclick="closeModal('confirmar-operacion-modal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getProductoTerminadoHTML() {
+    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-beer text-pagoa-green mr-3"></i>Producto Terminado</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+}
+
+function getVentasHTML() {
+    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-cash-register text-pagoa-green mr-3"></i>Ventas</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+}
+
+function getCostosHTML() {
+    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-calculator text-pagoa-green mr-3"></i>Costos y Análisis</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+}
+
+function getRecetasHTML() {
+    return `
+        <div class="fade-in">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-book text-pagoa-green mr-3"></i>Recetas
+                </h1>
+                <button onclick="openAddRecetaModal()" class="bg-pagoa-green text-white px-4 py-2 rounded-lg hover:bg-green-800 transition-colors">
+                    <i class="fas fa-plus mr-2"></i>Nueva Receta
+                </button>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg card-shadow mb-6">
+                <div class="flex items-center space-x-4">
+                    <label class="text-sm font-medium text-gray-700">Filtrar por Estilo:</label>
+                    <select id="filter-estilo-recetas" onchange="filterRecetasByEstilo()" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600">
+                        <option value="">Todos los estilos</option>
+                    </select>
+                    <button onclick="loadRecetas()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>Actualizar
+                    </button>
+                </div>
+            </div>
+            
+            <div id="recetas-container">
+                <p class="text-gray-500 text-center py-8">Cargando recetas...</p>
+            </div>
+        </div>
+        
+        <div id="receta-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-2xl font-bold mb-4" id="receta-modal-title">Nueva Receta</h3>
+                
+                <form id="receta-form" class="space-y-4">
+                    <input type="hidden" id="receta-id">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Estilo de Cerveza *</label>
+                        <input type="text" 
+                               id="receta-estilo" 
+                               required 
+                               list="estilos-datalist"
+                               placeholder="Ej: IPA, Stout, Lager..."
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                        <datalist id="estilos-datalist">
+                            <option value="IPA">
+                            <option value="Pale Ale">
+                            <option value="Stout">
+                            <option value="Porter">
+                            <option value="Lager">
+                            <option value="Pilsner">
+                            <option value="Wheat Beer">
+                            <option value="Belgian Ale">
+                            <option value="Amber Ale">
+                            <option value="Brown Ale">
+                        </datalist>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Operación *</label>
+                        <select id="receta-tipo-operacion" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                            <option value="Elaboración de mosto">Elaboración de mosto</option>
+                            <option value="Envasado">Envasado</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ingrediente/Material *</label>
+                        <select id="receta-ingrediente" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                            <option value="">Seleccione un material...</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Si no aparece, añádalo primero en Materias Primas</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad por 100L *</label>
+                            <input type="number" 
+                                   step="0.01" 
+                                   id="receta-cantidad" 
+                                   required 
+                                   placeholder="0.00"
+                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Unidad *</label>
+                            <input type="text" 
+                                   id="receta-unidad" 
+                                   required 
+                                   readonly
+                                   placeholder="kg"
+                                   class="w-full px-4 py-2 border rounded-lg bg-gray-100">
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-3 mt-6">
+                        <button type="submit" class="flex-1 bg-pagoa-green text-white py-2 rounded-lg hover:bg-green-800 transition-colors">
+                            <i class="fas fa-save mr-2"></i>Guardar
+                        </button>
+                        <button type="button" onclick="closeModal('receta-modal')" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+function getHistorialHTML() {
+    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-history text-pagoa-green mr-3"></i>Historial</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+}
+
+function getConfiguracionHTML() {
+    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-cog text-pagoa-green mr-3"></i>Configuración</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+}
+
+// ============================================
+// EVENT LISTENERS
+// ============================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkSession();
+    
+    document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        await handleLogin(email, password);
+    });
+    
+    document.getElementById('register-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('register-name').value;
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+        await handleRegister(name, email, password);
+    });
+    
+    document.getElementById('show-register')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showRegisterScreen();
+    });
+    
+    document.getElementById('show-login')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showLoginScreen();
+    });
+    
+    document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+    
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const view = e.currentTarget.dataset.view;
+            loadView(view);
+        });
+    });
+});
+
+console.log('✅ App.js cargado correctamente'); {
     return `
         <div class="fade-in">
             <div class="flex justify-between items-center mb-6">

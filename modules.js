@@ -864,11 +864,514 @@ function filterProductoTerminado() {
 // MÓDULO: VENTAS
 // ============================================
 
+// ============================================
+// MÓDULO: VENTAS
+// ============================================
+
 async function initVentas() {
-    // Funcionalidad a implementar en siguiente fase
-    console.log('Módulo Ventas inicializado');
+    // Establecer fecha de hoy por defecto
+    const hoy = new Date().toISOString().split('T')[0];
+    const fechaInput = document.getElementById('venta-fecha');
+    if (fechaInput) {
+        fechaInput.value = hoy;
+    }
+    
+    await loadVentas();
+    await loadVentasCharts();
+    await loadLotesForVentas();
+    await loadClientesForVentas();
+    await loadEstilosFilterVentas();
+    await loadMesesFilterVentas();
+    
+    // Evento submit del formulario
+    const form = document.getElementById('venta-form');
+    if (form) {
+        form.addEventListener('submit', handleSaveVenta);
+    }
 }
 
+async function loadVentas() {
+    try {
+        const { data: ventas, error } = await supabase
+            .from('ventas')
+            .select('*')
+            .order('fecha', { ascending: false });
+        
+        if (error) throw error;
+        
+        // Calcular KPIs del mes actual
+        const mesActual = new Date().getMonth() + 1;
+        const añoActual = new Date().getFullYear();
+        const primerDiaMes = new Date(añoActual, mesActual - 1, 1).toISOString().split('T')[0];
+        const ultimoDiaMes = new Date(añoActual, mesActual, 0).toISOString().split('T')[0];
+        
+        const ventasMes = ventas?.filter(v => v.fecha >= primerDiaMes && v.fecha <= ultimoDiaMes) || [];
+        
+        const totalVentasMes = ventasMes.reduce((sum, v) => 
+            sum + (parseFloat(v.cantidad || 0) * parseFloat(v.precio_unitario || 0)), 0);
+        const totalUnidadesMes = ventasMes.reduce((sum, v) => sum + parseInt(v.cantidad || 0), 0);
+        const precioMedio = totalUnidadesMes > 0 ? totalVentasMes / totalUnidadesMes : 0;
+        const clientesUnicos = [...new Set(ventas?.map(v => v.cliente) || [])].length;
+        
+        document.getElementById('ventas-mes').textContent = totalVentasMes.toFixed(2) + ' €';
+        document.getElementById('unidades-vendidas-mes').textContent = totalUnidadesMes.toLocaleString();
+        document.getElementById('precio-medio').textContent = precioMedio.toFixed(2) + ' €';
+        document.getElementById('total-clientes').textContent = clientesUnicos;
+        
+        // Generar tabla
+        const container = document.getElementById('ventas-table-container');
+        
+        if (!ventas || ventas.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-cash-register text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg mb-4">No hay ventas registradas</p>
+                    <button onclick="openAddVentaModal()" class="bg-pagoa-green text-white px-6 py-3 rounded-lg hover:bg-green-800 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Registrar Primera Venta
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <table class="min-w-full" id="tabla-ventas">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lote</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estilo</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Presentación</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+        `;
+        
+        ventas.forEach(v => {
+            const fecha = new Date(v.fecha).toLocaleDateString('es-ES');
+            const total = parseFloat(v.cantidad || 0) * parseFloat(v.precio_unitario || 0);
+            
+            html += `
+                <tr class="hover:bg-gray-50" 
+                    data-canal="${v.canal}" 
+                    data-estilo="${v.estilo}"
+                    data-fecha="${v.fecha}">
+                    <td class="px-4 py-3 text-sm text-gray-900">${fecha}</td>
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${v.cliente}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${v.numero_lote}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${v.estilo}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${v.presentacion}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">${parseInt(v.cantidad).toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${parseFloat(v.precio_unitario).toFixed(2)} €</td>
+                    <td class="px-4 py-3 text-sm font-bold text-green-600">${total.toFixed(2)} €</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${getCanalColor(v.canal)}">
+                            ${v.canal}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                        <button onclick="deleteVenta(${v.id})" class="text-red-600 hover:text-red-800" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando ventas:', error);
+        document.getElementById('ventas-table-container').innerHTML = 
+            '<p class="text-red-600 text-center py-4">Error al cargar ventas</p>';
+    }
+}
+
+function getCanalColor(canal) {
+    const colores = {
+        'Hostelería': 'bg-blue-100 text-blue-800',
+        'Tienda Online': 'bg-green-100 text-green-800',
+        'Distribuidores': 'bg-purple-100 text-purple-800',
+        'Eventos': 'bg-orange-100 text-orange-800',
+        'Otro': 'bg-gray-100 text-gray-800'
+    };
+    return colores[canal] || 'bg-gray-100 text-gray-800';
+}
+
+async function loadVentasCharts() {
+    try {
+        const { data: ventas, error } = await supabase
+            .from('ventas')
+            .select('*');
+        
+        if (error) throw error;
+        if (!ventas || ventas.length === 0) return;
+        
+        // Gráfico por Canal
+        const ventasPorCanal = ventas.reduce((acc, v) => {
+            const canal = v.canal || 'Otro';
+            const total = parseFloat(v.cantidad || 0) * parseFloat(v.precio_unitario || 0);
+            acc[canal] = (acc[canal] || 0) + total;
+            return acc;
+        }, {});
+        
+        const ctxCanal = document.getElementById('chart-ventas-canal');
+        if (ctxCanal) {
+            new Chart(ctxCanal, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(ventasPorCanal),
+                    datasets: [{
+                        data: Object.values(ventasPorCanal),
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(249, 115, 22, 0.8)',
+                            'rgba(107, 114, 128, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Gráfico por Estilo
+        const ventasPorEstilo = ventas.reduce((acc, v) => {
+            const estilo = v.estilo;
+            const total = parseFloat(v.cantidad || 0) * parseFloat(v.precio_unitario || 0);
+            acc[estilo] = (acc[estilo] || 0) + total;
+            return acc;
+        }, {});
+        
+        const ctxEstilo = document.getElementById('chart-ventas-estilo');
+        if (ctxEstilo) {
+            new Chart(ctxEstilo, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(ventasPorEstilo),
+                    datasets: [{
+                        label: 'Ventas (€)',
+                        data: Object.values(ventasPorEstilo),
+                        backgroundColor: 'rgba(26, 77, 46, 0.8)',
+                        borderColor: 'rgba(26, 77, 46, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + ' €';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error cargando gráficos de ventas:', error);
+    }
+}
+
+async function loadLotesForVentas() {
+    try {
+        const { data, error } = await supabase
+            .from('producto_terminado')
+            .select('*')
+            .order('numero_lote', { ascending: true });
+        
+        if (error) throw error;
+        
+        // Calcular stock disponible para cada lote
+        const lotesConStock = await Promise.all(data.map(async (lote) => {
+            const { data: ventas } = await supabase
+                .from('ventas')
+                .select('cantidad')
+                .eq('numero_lote', lote.numero_lote)
+                .eq('presentacion', lote.tipo_envase);
+            
+            const totalVendido = ventas?.reduce((sum, v) => sum + parseInt(v.cantidad || 0), 0) || 0;
+            const stockActual = parseInt(lote.unidades_producidas) - totalVendido;
+            
+            return {
+                ...lote,
+                stock_actual: stockActual
+            };
+        }));
+        
+        // Filtrar solo lotes con stock disponible
+        const lotesDisponibles = lotesConStock.filter(l => l.stock_actual > 0);
+        
+        const select = document.getElementById('venta-lote');
+        if (select) {
+            select.innerHTML = '<option value="">Seleccione un lote...</option>';
+            lotesDisponibles.forEach(lote => {
+                const option = document.createElement('option');
+                option.value = lote.numero_lote;
+                option.textContent = `${lote.numero_lote} - ${lote.estilo} (${lote.stock_actual} disponibles)`;
+                option.dataset.estilo = lote.estilo;
+                option.dataset.envase = lote.tipo_envase;
+                option.dataset.stock = lote.stock_actual;
+                select.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error cargando lotes:', error);
+    }
+}
+
+async function loadClientesForVentas() {
+    try {
+        const { data, error } = await supabase
+            .from('ventas')
+            .select('cliente');
+        
+        if (error) throw error;
+        
+        const clientes = [...new Set(data.map(v => v.cliente))].sort();
+        const datalist = document.getElementById('clientes-datalist');
+        
+        if (datalist) {
+            datalist.innerHTML = '';
+            clientes.forEach(cliente => {
+                const option = document.createElement('option');
+                option.value = cliente;
+                datalist.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error cargando clientes:', error);
+    }
+}
+
+async function loadEstilosFilterVentas() {
+    try {
+        const { data, error } = await supabase
+            .from('ventas')
+            .select('estilo');
+        
+        if (error) throw error;
+        
+        const estilos = [...new Set(data.map(v => v.estilo))].sort();
+        const select = document.getElementById('filter-estilo-ventas');
+        
+        if (select) {
+            select.innerHTML = '<option value="">Todos los estilos</option>';
+            estilos.forEach(estilo => {
+                const option = document.createElement('option');
+                option.value = estilo;
+                option.textContent = estilo;
+                select.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error cargando estilos:', error);
+    }
+}
+
+async function loadMesesFilterVentas() {
+    const select = document.getElementById('filter-mes-ventas');
+    if (!select) return;
+    
+    const meses = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    const añoActual = new Date().getFullYear();
+    
+    for (let i = 0; i < 12; i++) {
+        const option = document.createElement('option');
+        option.value = `${añoActual}-${String(i + 1).padStart(2, '0')}`;
+        option.textContent = `${meses[i]} ${añoActual}`;
+        select.appendChild(option);
+    }
+}
+
+function updateVentaLoteInfo() {
+    const select = document.getElementById('venta-lote');
+    const selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption.value) {
+        const estilo = selectedOption.dataset.estilo;
+        const envase = selectedOption.dataset.envase;
+        const stock = selectedOption.dataset.stock;
+        
+        document.getElementById('info-estilo').textContent = estilo;
+        document.getElementById('info-stock').textContent = stock;
+        document.getElementById('info-lote').style.display = 'block';
+        
+        // Actualizar presentaciones disponibles
+        const presentacionSelect = document.getElementById('venta-presentacion');
+        presentacionSelect.innerHTML = <option value="${envase}">${envase}</option>`;`
+presentacionSelect.value = envase;
+        
+    // Actualizar campo oculto de estilo
+    const cantidadInput = document.getElementById('venta-cantidad');
+    cantidadInput.max = stock;
+    cantidadInput.placeholder = `Máximo ${stock}`;
+} else {
+    document.getElementById('info-lote').style.display = 'none';
+    document.getElementById('venta-presentacion').innerHTML = '<option value="">Seleccione presentación...</option>';
+}
+}
+function updateStockDisponible() {
+// Ya gestionado en updateVentaLoteInfo
+}
+function calculateTotalVenta() {
+const cantidad = parseFloat(document.getElementById('venta-cantidad').value) || 0;
+const precio = parseFloat(document.getElementById('venta-precio').value) || 0;
+const total = cantidad * precio;
+document.getElementById('total-venta').textContent = total.toFixed(2) + ' €';
+}
+function openAddVentaModal() {
+document.getElementById('venta-modal-title').textContent = 'Registrar Venta';
+document.getElementById('venta-form').reset();
+document.getElementById('venta-id').value = '';
+const hoy = new Date().toISOString().split('T')[0];
+document.getElementById('venta-fecha').value = hoy;
+
+document.getElementById('info-lote').style.display = 'none';
+document.getElementById('total-venta').textContent = '0.00 €';
+
+openModal('venta-modal');
+}
+async function handleSaveVenta(e) {
+e.preventDefault();
+try {
+    const select = document.getElementById('venta-lote');
+    const selectedOption = select.options[select.selectedIndex];
+    const estilo = selectedOption.dataset.estilo;
+    const stock = parseInt(selectedOption.dataset.stock);
+    const cantidad = parseInt(document.getElementById('venta-cantidad').value);
+    
+    // Verificar stock suficiente
+    if (cantidad > stock) {
+        alert(`Stock insuficiente. Solo hay ${stock} unidades disponibles.`);
+        return;
+    }
+    
+    const ventaData = {
+        fecha: document.getElementById('venta-fecha').value,
+        numero_lote: document.getElementById('venta-lote').value,
+        cliente: document.getElementById('venta-cliente').value,
+        estilo: estilo,
+        presentacion: document.getElementById('venta-presentacion').value,
+        cantidad: cantidad,
+        tipo_caja: document.getElementById('venta-tipo-caja').value || null,
+        precio_unitario: parseFloat(document.getElementById('venta-precio').value),
+        canal: document.getElementById('venta-canal').value,
+        created_by: currentUser.id
+    };
+    
+    const { error } = await supabase
+        .from('ventas')
+        .insert([ventaData]);
+    
+    if (error) throw error;
+    
+    alert('✅ Venta registrada correctamente');
+    
+    closeModal('venta-modal');
+    await loadVentas();
+    await loadVentasCharts();
+    
+    // Actualizar dashboard si está visible
+    if (currentView === 'dashboard') {
+        initDashboard();
+    }
+    
+    // Actualizar producto terminado si está visible
+    if (currentView === 'producto-terminado') {
+        initProductoTerminado();
+    }
+    
+} catch (error) {
+    console.error('Error guardando venta:', error);
+    alert('Error al registrar la venta: ' + error.message);
+}
+}
+async function deleteVenta(id) {
+if (!confirm('¿Está seguro de eliminar esta venta?')) {
+return;
+}
+try {
+    const { error } = await supabase
+        .from('ventas')
+        .delete()
+        .eq('id', id);
+    
+    if (error) throw error;
+    
+    alert('Venta eliminada correctamente');
+    await loadVentas();
+    await loadVentasCharts();
+    
+} catch (error) {
+    console.error('Error eliminando venta:', error);
+    alert('Error al eliminar la venta');
+}
+}
+function filterVentas() {
+const canalFiltro = document.getElementById('filter-canal-ventas').value;
+const estiloFiltro = document.getElementById('filter-estilo-ventas').value;
+const mesFiltro = document.getElementById('filter-mes-ventas').value;
+const filas = document.querySelectorAll('#tabla-ventas tbody tr');
+
+filas.forEach(fila => {
+    let mostrar = true;
+    
+    if (canalFiltro && fila.dataset.canal !== canalFiltro) {
+        mostrar = false;
+    }
+    
+    if (estiloFiltro && fila.dataset.estilo !== estiloFiltro) {
+        mostrar = false;
+    }
+    
+    if (mesFiltro) {
+        const fechaFila = fila.dataset.fecha;
+        if (!fechaFila.startsWith(mesFiltro)) {
+            mostrar = false;
+        }
+    }
+    
+    if (mostrar) {
+        fila.classList.remove('hidden');
+    } else {
+        fila.classList.add('hidden');
+    }
+});
 // ============================================
 // MÓDULO: COSTOS
 // ============================================

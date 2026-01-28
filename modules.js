@@ -616,8 +616,248 @@ async function initProduccion() {
 // ============================================
 
 async function initProductoTerminado() {
-    // Funcionalidad a implementar en siguiente fase
-    console.log('Módulo Producto Terminado inicializado');
+    await loadProductoTerminado();
+    await loadEstilosFilterProducto();
+    await loadEnvasesFilterProducto();
+}
+
+async function loadProductoTerminado() {
+    try {
+        const { data: productos, error } = await supabase
+            .from('producto_terminado')
+            .select('*')
+            .order('fecha_envasado', { ascending: false });
+        
+        if (error) throw error;
+        
+        const container = document.getElementById('producto-terminado-table-container');
+        
+        if (!productos || productos.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-beer text-6xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500 text-lg mb-4">No hay producto terminado registrado</p>
+                    <p class="text-gray-600 text-sm">El producto terminado se genera automáticamente al confirmar operaciones de envasado</p>
+                </div>
+            `;
+            
+            // Resetear KPIs
+            document.getElementById('total-lotes').textContent = '0';
+            document.getElementById('total-unidades').textContent = '0';
+            document.getElementById('stock-disponible').textContent = '0';
+            document.getElementById('total-vendidas').textContent = '0';
+            
+            return;
+        }
+        
+        // Calcular stock actual para cada producto
+        const productosConStock = await Promise.all(productos.map(async (p) => {
+            const { data: ventas } = await supabase
+                .from('ventas')
+                .select('cantidad')
+                .eq('numero_lote', p.numero_lote)
+                .eq('presentacion', p.tipo_envase);
+            
+            const totalVendido = ventas?.reduce((sum, v) => sum + parseInt(v.cantidad || 0), 0) || 0;
+            const stockActual = parseInt(p.unidades_producidas) - totalVendido;
+            
+            // Calcular días hasta caducidad
+            const hoy = new Date();
+            const fechaCaducidad = new Date(p.fecha_caducidad);
+            const diasHastaCaducidad = Math.ceil((fechaCaducidad - hoy) / (1000 * 60 * 60 * 24));
+            
+            return {
+                ...p,
+                stock_actual: stockActual,
+                total_vendido: totalVendido,
+                dias_hasta_caducidad: diasHastaCaducidad
+            };
+        }));
+        
+        // Calcular KPIs
+        const totalLotes = productosConStock.length;
+        const totalUnidades = productosConStock.reduce((sum, p) => sum + parseInt(p.unidades_producidas), 0);
+        const stockDisponible = productosConStock.reduce((sum, p) => sum + p.stock_actual, 0);
+        const totalVendidas = productosConStock.reduce((sum, p) => sum + p.total_vendido, 0);
+        
+        document.getElementById('total-lotes').textContent = totalLotes;
+        document.getElementById('total-unidades').textContent = totalUnidades.toLocaleString();
+        document.getElementById('stock-disponible').textContent = stockDisponible.toLocaleString();
+        document.getElementById('total-vendidas').textContent = totalVendidas.toLocaleString();
+        
+        // Generar tabla
+        let html = `
+            <table class="min-w-full" id="tabla-producto-terminado">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lote</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estilo</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Envase</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producido</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendido</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">F. Envasado</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">F. Caducidad</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ubicación</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+        `;
+        
+        productosConStock.forEach(p => {
+            const fechaEnvasado = new Date(p.fecha_envasado).toLocaleDateString('es-ES');
+            const fechaCaducidad = new Date(p.fecha_caducidad).toLocaleDateString('es-ES');
+            
+            // Determinar estado
+            let estadoBadge = '';
+            let estadoTexto = '';
+            
+            if (p.stock_actual === 0) {
+                estadoBadge = 'bg-gray-100 text-gray-800';
+                estadoTexto = 'Agotado';
+            } else if (p.dias_hasta_caducidad <= 0) {
+                estadoBadge = 'bg-red-100 text-red-800';
+                estadoTexto = 'Caducado';
+            } else if (p.dias_hasta_caducidad <= 30) {
+                estadoBadge = 'bg-orange-100 text-orange-800';
+                estadoTexto = `Caduca en ${p.dias_hasta_caducidad}d`;
+            } else if (p.dias_hasta_caducidad <= 60) {
+                estadoBadge = 'bg-yellow-100 text-yellow-800';
+                estadoTexto = `Caduca en ${p.dias_hasta_caducidad}d`;
+            } else {
+                estadoBadge = 'bg-green-100 text-green-800';
+                estadoTexto = 'Disponible';
+            }
+            
+            const stockColor = p.stock_actual > 0 ? 'text-green-600 font-bold' : 'text-gray-400';
+            
+            html += `
+                <tr class="hover:bg-gray-50" 
+                    data-estilo="${p.estilo}" 
+                    data-envase="${p.tipo_envase}" 
+                    data-estado="${p.stock_actual > 0 ? 'disponible' : 'agotado'}"
+                    data-dias-caducidad="${p.dias_hasta_caducidad}">
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">${p.numero_lote}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${p.estilo}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${p.tipo_envase}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${parseInt(p.unidades_producidas).toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${p.total_vendido.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm ${stockColor}">${p.stock_actual.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${fechaEnvasado}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${fechaCaducidad}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${estadoBadge}">
+                            ${estadoTexto}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${p.ubicacion || '-'}</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando producto terminado:', error);
+        document.getElementById('producto-terminado-table-container').innerHTML = 
+            '<p class="text-red-600 text-center py-4">Error al cargar el inventario</p>';
+    }
+}
+
+async function loadEstilosFilterProducto() {
+    try {
+        const { data, error } = await supabase
+            .from('producto_terminado')
+            .select('estilo');
+        
+        if (error) throw error;
+        
+        const estilos = [...new Set(data.map(p => p.estilo))].sort();
+        const select = document.getElementById('filter-estilo-producto');
+        
+        if (select) {
+            select.innerHTML = '<option value="">Todos los estilos</option>';
+            estilos.forEach(estilo => {
+                const option = document.createElement('option');
+                option.value = estilo;
+                option.textContent = estilo;
+                select.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error cargando estilos:', error);
+    }
+}
+
+async function loadEnvasesFilterProducto() {
+    try {
+        const { data, error } = await supabase
+            .from('producto_terminado')
+            .select('tipo_envase');
+        
+        if (error) throw error;
+        
+        const envases = [...new Set(data.map(p => p.tipo_envase))].sort();
+        const select = document.getElementById('filter-envase-producto');
+        
+        if (select) {
+            select.innerHTML = '<option value="">Todos los envases</option>';
+            envases.forEach(envase => {
+                const option = document.createElement('option');
+                option.value = envase;
+                option.textContent = envase;
+                select.appendChild(option);
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error cargando envases:', error);
+    }
+}
+
+function filterProductoTerminado() {
+    const estiloFiltro = document.getElementById('filter-estilo-producto').value;
+    const envaseFiltro = document.getElementById('filter-envase-producto').value;
+    const estadoFiltro = document.getElementById('filter-estado-producto').value;
+    
+    const filas = document.querySelectorAll('#tabla-producto-terminado tbody tr');
+    
+    filas.forEach(fila => {
+        let mostrar = true;
+        
+        // Filtro por estilo
+        if (estiloFiltro && fila.dataset.estilo !== estiloFiltro) {
+            mostrar = false;
+        }
+        
+        // Filtro por envase
+        if (envaseFiltro && fila.dataset.envase !== envaseFiltro) {
+            mostrar = false;
+        }
+        
+        // Filtro por estado
+        if (estadoFiltro) {
+            if (estadoFiltro === 'disponible' && fila.dataset.estado !== 'disponible') {
+                mostrar = false;
+            } else if (estadoFiltro === 'agotado' && fila.dataset.estado !== 'agotado') {
+                mostrar = false;
+            } else if (estadoFiltro === 'proximo-caducar') {
+                const diasCaducidad = parseInt(fila.dataset.diasCaducidad);
+                if (diasCaducidad > 60 || diasCaducidad <= 0) {
+                    mostrar = false;
+                }
+            }
+        }
+        
+        if (mostrar) {
+            fila.classList.remove('hidden');
+        } else {
+            fila.classList.add('hidden');
+        }
+    });
 }
 
 // ============================================

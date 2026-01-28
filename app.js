@@ -2894,7 +2894,61 @@ function getRecetasHTML() {
 }
 
 function getHistorialHTML() {
-    return '<div class="fade-in"><h1 class="text-3xl font-bold text-gray-800 mb-6"><i class="fas fa-history text-pagoa-green mr-3"></i>Historial</h1><p class="text-gray-600">Módulo en construcción...</p></div>';
+    return `<div class="fade-in">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-history text-pagoa-green mr-3"></i>Historial de Operaciones
+        </h1>
+
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Operación</label>
+                    <select id="historial-tipo" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Todos</option>
+                        <option value="Producción confirmada">Producción confirmada</option>
+                        <option value="Venta registrada">Venta registrada</option>
+                        <option value="Material descontado">Material descontado</option>
+                        <option value="Costos fijos actualizados">Costos fijos actualizados</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                    <input type="date" id="historial-desde" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                    <input type="date" id="historial-hasta" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div class="flex items-end">
+                    <button id="btn-filtrar-historial" class="w-full bg-pagoa-green text-white py-2 rounded-lg hover:bg-opacity-90 transition">
+                        <i class="fas fa-search mr-2"></i>Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <table class="min-w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Fecha/Hora</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Operación</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Lote</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Estilo</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Volumen/Cantidad</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Detalles</th>
+                    </tr>
+                </thead>
+                <tbody id="historial-table" class="divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>Cargando historial...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>`;
 }
 
 function getConfiguracionHTML() {

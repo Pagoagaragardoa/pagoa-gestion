@@ -80,9 +80,11 @@ async function loadDashboardKPIs() {
         // Márgenes
         const margenBruto = totalVentas - totalCostosVariables;
         const margenNeto = margenBruto - totalCostosFijos;
+        const porcentajeMargenBruto = totalVentas > 0 ? ((margenBruto / totalVentas) * 100) : 0;
+        const porcentajeMargenNeto = totalVentas > 0 ? ((margenNeto / totalVentas) * 100) : 0;
         
-        document.getElementById('kpi-margen-bruto').textContent = `${margenBruto.toFixed(2)} €`;
-        document.getElementById('kpi-margen-neto').textContent = `${margenNeto.toFixed(2)} €`;
+        document.getElementById('kpi-margen-bruto').textContent = `${margenBruto.toFixed(2)} € (${porcentajeMargenBruto.toFixed(1)}%)`;
+        document.getElementById('kpi-margen-neto').textContent = `${margenNeto.toFixed(2)} € (${porcentajeMargenNeto.toFixed(1)}%)`;
         
         // Color según si es positivo o negativo
         const margenNetoEl = document.getElementById('kpi-margen-neto');
@@ -1854,8 +1856,164 @@ async function initRecetas() {
 // ============================================
 
 async function initHistorial() {
-    // Funcionalidad a implementar en siguiente fase
-    console.log('Módulo Historial inicializado');
+    // Establecer fechas por defecto (últimos 30 días)
+    const hoy = new Date();
+    const hace30Dias = new Date(hoy.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    document.getElementById('historial-desde').valueAsDate = hace30Dias;
+    document.getElementById('historial-hasta').valueAsDate = hoy;
+    
+    // Cargar historial
+    await loadHistorial();
+    
+    // Event listeners
+    document.getElementById('btn-filtrar-historial')?.addEventListener('click', async () => {
+        await loadHistorial();
+    });
+    
+    // Filtrar al cambiar tipo
+    document.getElementById('historial-tipo')?.addEventListener('change', async () => {
+        await loadHistorial();
+    });
+}
+
+async function loadHistorial() {
+    try {
+        const tipo = document.getElementById('historial-tipo')?.value || '';
+        const desde = document.getElementById('historial-desde')?.value;
+        const hasta = document.getElementById('historial-hasta')?.value;
+        
+        const historialData = [];
+        
+        // Obtener producciones confirmadas
+        const { data: producciones } = await supabase
+            .from('produccion')
+            .select('*')
+            .eq('confirmado', true)
+            .order('fecha', { ascending: false });
+        
+        if (producciones) {
+            producciones.forEach(p => {
+                const fechaOp = new Date(p.fecha);
+                const fechaDesde = desde ? new Date(desde) : null;
+                const fechaHasta = hasta ? new Date(hasta) : null;
+                
+                let incluir = true;
+                if (fechaDesde && fechaOp < fechaDesde) incluir = false;
+                if (fechaHasta) {
+                    const fechaHastaMasDia = new Date(fechaHasta);
+                    fechaHastaMasDia.setDate(fechaHastaMasDia.getDate() + 1);
+                    if (fechaOp > fechaHastaMasDia) incluir = false;
+                }
+                
+                if (tipo && tipo !== 'Producción confirmada') incluir = false;
+                
+                if (incluir) {
+                    historialData.push({
+                        fecha: p.fecha,
+                        operacion: 'Producción confirmada',
+                        lote: p.numero_lote || '-',
+                        estilo: p.estilo || '-',
+                        volumen: `${parseFloat(p.volumen_litros || 0).toFixed(1)} L`,
+                        detalles: `Costo: ${parseFloat(p.costo || 0).toFixed(2)} €`
+                    });
+                }
+            });
+        }
+        
+        // Obtener ventas
+        const { data: ventas } = await supabase
+            .from('ventas')
+            .select('*')
+            .order('fecha', { ascending: false });
+        
+        if (ventas) {
+            ventas.forEach(v => {
+                const fechaOp = new Date(v.fecha);
+                const fechaDesde = desde ? new Date(desde) : null;
+                const fechaHasta = hasta ? new Date(hasta) : null;
+                
+                let incluir = true;
+                if (fechaDesde && fechaOp < fechaDesde) incluir = false;
+                if (fechaHasta) {
+                    const fechaHastaMasDia = new Date(fechaHasta);
+                    fechaHastaMasDia.setDate(fechaHastaMasDia.getDate() + 1);
+                    if (fechaOp > fechaHastaMasDia) incluir = false;
+                }
+                
+                if (tipo && tipo !== 'Venta registrada') incluir = false;
+                
+                if (incluir) {
+                    historialData.push({
+                        fecha: v.fecha,
+                        operacion: 'Venta registrada',
+                        lote: v.numero_lote || '-',
+                        estilo: '-',
+                        volumen: `${parseFloat(v.cantidad || 0).toFixed(0)} unidades`,
+                        detalles: `Precio: ${parseFloat(v.precio_unitario || 0).toFixed(2)} €/ud`
+                    });
+                }
+            });
+        }
+        
+        // Ordenar por fecha descendente
+        historialData.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        
+        // Renderizar tabla
+        const table = document.getElementById('historial-table');
+        if (!historialData || historialData.length === 0) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                        <i class="fas fa-inbox mr-2"></i>No hay registros en el historial
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        let html = '';
+        historialData.forEach(h => {
+            const fecha = new Date(h.fecha).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const operacionColor = h.operacion === 'Producción confirmada' ? 'text-blue-600' :
+                                   h.operacion === 'Venta registrada' ? 'text-green-600' :
+                                   'text-gray-600';
+            
+            html += `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm text-gray-700">${fecha}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${operacionColor} bg-opacity-10" style="background-color: ${operacionColor}33">
+                            ${h.operacion}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm font-mono text-gray-900">${h.lote}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">${h.estilo}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">${h.volumen}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${h.detalles}</td>
+                </tr>
+            `;
+        });
+        
+        table.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando historial:', error);
+        document.getElementById('historial-table').innerHTML = `
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-red-600">
+                    Error al cargar el historial: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
 }
 
 // ============================================

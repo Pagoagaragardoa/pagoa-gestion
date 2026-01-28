@@ -2162,26 +2162,52 @@ async function loadHistorial() {
 // ============================================
 
 async function initConfiguracion() {
-    // Cargar configuración desde localStorage (temporal)
-    const cfg = JSON.parse(localStorage.getItem('pagoa_config') || '{}');
+    // Cargar configuración desde Supabase
+    try {
+        const empresaInput = document.getElementById('config-empresa');
+        const monedaInput = document.getElementById('config-moneda');
+        const contactoInput = document.getElementById('config-contacto');
 
-    const empresaInput = document.getElementById('config-empresa');
-    const monedaInput = document.getElementById('config-moneda');
-    const contactoInput = document.getElementById('config-contacto');
+        const { data, error } = await supabase
+            .from('configuracion')
+            .select('*')
+            .limit(1);
 
-    if (empresaInput) empresaInput.value = cfg.empresa || '';
-    if (monedaInput) monedaInput.value = cfg.moneda || '€';
-    if (contactoInput) contactoInput.value = cfg.contacto || '';
+        if (error) {
+            console.warn('No se pudo leer configuración desde Supabase (¿tabla configuracion existe?):', error.message);
+        }
 
-    document.getElementById('config-save-btn')?.addEventListener('click', (e) => {
-        const nuevaCfg = {
-            empresa: empresaInput?.value || '',
-            moneda: monedaInput?.value || '€',
-            contacto: contactoInput?.value || ''
-        };
-        localStorage.setItem('pagoa_config', JSON.stringify(nuevaCfg));
-        alert('Configuración guardada (local).');
-    });
+        const cfg = (data && data.length > 0) ? data[0] : null;
+
+        if (empresaInput) empresaInput.value = cfg?.empresa || '';
+        if (monedaInput) monedaInput.value = cfg?.moneda || '€';
+        if (contactoInput) contactoInput.value = cfg?.contacto || '';
+
+        document.getElementById('config-save-btn')?.addEventListener('click', async (e) => {
+            try {
+                const nuevaCfg = {
+                    id: 1,
+                    empresa: empresaInput?.value || '',
+                    moneda: monedaInput?.value || '€',
+                    contacto: contactoInput?.value || '',
+                    updated_by: currentUser?.id || null
+                };
+
+                const { error: upsertError } = await supabase
+                    .from('configuracion')
+                    .upsert([nuevaCfg], { returning: 'minimal' });
+
+                if (upsertError) throw upsertError;
+
+                alert('✅ Configuración guardada en Supabase');
+            } catch (saveError) {
+                console.error('Error guardando configuración en Supabase:', saveError.message);
+                alert('Error al guardar en Supabase. Asegúrate de crear la tabla `configuracion`.');
+            }
+        });
+    } catch (err) {
+        console.error('Error inicializando configuración:', err.message);
+    }
 }
 
 // ============================================

@@ -219,9 +219,12 @@
             </nav>
             
             <!-- Menú Lateral + Contenido -->
-            <div class="flex h-screen">
+            <div class="flex h-screen overflow-hidden">
+                <!-- Overlay para móvil -->
+                <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
+                
                 <!-- Sidebar -->
-                <aside class="w-64 bg-white shadow-lg overflow-y-auto">
+                <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out w-64 bg-white shadow-lg overflow-y-auto z-50">
                     <nav class="p-4 space-y-2">
                         <a href="#" data-view="dashboard" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-green-50 text-gray-700 hover:text-pagoa-green transition-colors">
                             <i class="fas fa-chart-line w-5"></i>
@@ -273,15 +276,56 @@
                 </aside>
                 
                 <!-- Área de Contenido Principal -->
-                <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
-                    <div id="content-area">
-                        <!-- El contenido dinámico se cargará aquí -->
+                <main class="flex-1 overflow-y-auto bg-gray-50">
+                    <!-- Botón menú móvil -->
+                    <button id="mobile-menu-btn" onclick="toggleSidebar()" class="lg:hidden fixed bottom-4 right-4 z-30 bg-pagoa-green text-white p-4 rounded-full shadow-lg hover:bg-green-800 transition-colors">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    
+                    <div class="p-6">
+                        <div id="content-area">
+                            <!-- El contenido dinámico se cargará aquí -->
+                        </div>
                     </div>
                 </main>
             </div>
-        </div>
-    </div>
-    
+    <script>
+        // Función para toggle del sidebar en móvil
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            const btn = document.getElementById('mobile-menu-btn');
+            
+            if (sidebar.classList.contains('-translate-x-full')) {
+                // Abrir
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                btn.innerHTML = '<i class="fas fa-times text-xl"></i>';
+            } else {
+                // Cerrar
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+                btn.innerHTML = '<i class="fas fa-bars text-xl"></i>';
+            }
+        }
+        
+        // Cerrar sidebar al hacer clic en un enlace (solo en móvil)
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.nav-link') && window.innerWidth < 1024) {
+                setTimeout(() => {
+                    const sidebar = document.getElementById('sidebar');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    const btn = document.getElementById('mobile-menu-btn');
+                    
+                    if (sidebar) {
+                        sidebar.classList.add('-translate-x-full');
+                        overlay?.classList.add('hidden');
+                        if (btn) btn.innerHTML = '<i class="fas fa-bars text-xl"></i>';
+                    }
+                }, 100);
+            }
+        });
+    </script>
     <!-- Scripts se cargarán desde archivos externos -->
     <script src="config.js"></script>
     <script src="app.js"></script>

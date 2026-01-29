@@ -1,39 +1,4 @@
--- Tablas a actualizar: materias_primas, produccion, producto_terminado, ventas, historial, configuracion
--- Si tienes más tablas con RLS añade su nombre en el bloque más abajo.
-
--- Ejemplo para una tabla (repite para cada tabla):
-ALTER TABLE public.materias_primas ENABLE ROW LEVEL SECURITY;
-
--- Elimina políticas previas inseguras (opcional, no falla si no existen)
-DROP POLICY IF EXISTS allow_select_authenticated ON public.materias_primas;
-DROP POLICY IF EXISTS allow_insert_authenticated ON public.materias_primas;
-DROP POLICY IF EXISTS allow_update_authenticated ON public.materias_primas;
-DROP POLICY IF EXISTS allow_delete_authenticated ON public.materias_primas;
-
--- Permitir SELECT a cualquier usuario autenticado
-CREATE POLICY allow_select_authenticated
-  ON public.materias_primas
-  FOR SELECT
-  USING (auth.role() = 'authenticated');
-
--- Permitir INSERT a cualquier usuario autenticado
-CREATE POLICY allow_insert_authenticated
-  ON public.materias_primas
-  FOR INSERT
-  WITH CHECK (auth.role() = 'authenticated');
-
--- Permitir UPDATE a cualquier usuario autenticado (puede actualizar cualquier fila)
-CREATE POLICY allow_update_authenticated
-  ON public.materias_primas
-  FOR UPDATE
-  USING (auth.role() = 'authenticated')
-  WITH CHECK (auth.role() = 'authenticated');
-
--- Permitir DELETE a cualquier usuario autenticado
-CREATE POLICY allow_delete_authenticated
-  ON public.materias_primas
-  FOR DELETE
-  USING (auth.role() = 'authenticated');// ============================================
+// ============================================
 // PAGOA CERVECERÍA - APLICACIÓN PRINCIPAL
 // ============================================
 // ============================================

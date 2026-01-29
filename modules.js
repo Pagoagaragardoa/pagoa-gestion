@@ -2204,8 +2204,7 @@ async function initConfiguracion() {
                     id: 1,
                     empresa: empresaInput?.value || '',
                     moneda: monedaInput?.value || '€',
-                    contacto: contactoInput?.value || '',
-                    
+                    contacto: contactoInput?.value || ''
                 };
 
                 const { error: upsertError } = await supabase

@@ -1407,8 +1407,7 @@ try {
         cantidad: cantidad,
         tipo_caja: document.getElementById('venta-tipo-caja').value || null,
         precio_unitario: parseFloat(document.getElementById('venta-precio').value),
-        canal: document.getElementById('venta-canal').value,
-        created_by: currentUser.id
+        canal: document.getElementById('venta-canal').value
     };
     
     const { error } = await supabase
@@ -1521,6 +1520,20 @@ async function initCostos() {
     if (form) {
         form.addEventListener('submit', handleSaveCostosFijos);
     }
+    
+    // Eventos para recargar cuando cambien mes o año
+    if (mesSelect) {
+        mesSelect.addEventListener('change', async () => {
+            await loadCostos();
+            await loadEvolucionFinanciera();
+        });
+    }
+    if (añoSelect) {
+        añoSelect.addEventListener('change', async () => {
+            await loadCostos();
+            await loadEvolucionFinanciera();
+        });
+    }
 }
 
 async function loadCostos() {
@@ -1618,7 +1631,7 @@ async function loadCostosFijosTable(mes, año, costosFijos) {
         'Mantenimiento'
     ];
     
-    let html = '<div class="space-y-2">';
+    let html = '<div class="space-y-3">';
     let total = 0;
     
     conceptos.forEach(concepto => {
@@ -1627,20 +1640,21 @@ async function loadCostosFijosTable(mes, año, costosFijos) {
         total += monto;
         
         html += `
-            <div class="flex justify-between items-center py-2 border-b">
-                <span class="text-sm text-gray-700">${concepto}</span>
+            <div class="flex justify-between items-center py-2 px-3 border rounded-lg hover:bg-gray-50">
+                <span class="text-sm font-medium text-gray-700">${concepto}</span>
                 <span class="font-semibold text-gray-900">${monto.toFixed(2)} €</span>
             </div>
         `;
     });
     
     html += `
-        <div class="flex justify-between items-center py-3 bg-red-50 px-3 rounded-lg mt-3">
-            <span class="font-bold text-gray-800">TOTAL</span>
-            <span class="text-xl font-bold text-red-600">${total.toFixed(2)} €</span>
+        <div class="flex justify-between items-center py-3 bg-red-50 px-3 rounded-lg mt-4 border-2 border-red-200">
+            <span class="font-bold text-red-800">TOTAL</span>
+            <span class="text-lg font-bold text-red-600">${total.toFixed(2)} €</span>
         </div>
     `;
     
+    html += '<div class="mt-4 text-center"><small class="text-gray-500">Haz clic en "Editar" arriba para modificar los costos</small></div>';
     html += '</div>';
     container.innerHTML = html;
 }
@@ -1789,15 +1803,15 @@ async function loadEvolucionFinanciera() {
             dataIngresos.push(ingresos);
             dataCostos.push(costosTotales);
             dataMargen.push(margen);
-}
+        }
 
-    const ctx = document.getElementById('chart-evolucion-financiera');
-    if (ctx) {
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: meses,
-                datasets: [
+        const ctx = document.getElementById('chart-evolucion-financiera');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: meses,
+                    datasets: [
                     {
                         label: 'Ingresos',
                         data: dataIngresos,
@@ -2191,7 +2205,7 @@ async function initConfiguracion() {
                     empresa: empresaInput?.value || '',
                     moneda: monedaInput?.value || '€',
                     contacto: contactoInput?.value || '',
-                    updated_by: currentUser?.id || null
+                    
                 };
 
                 const { error: upsertError } = await supabase

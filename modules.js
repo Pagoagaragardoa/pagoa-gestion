@@ -1488,6 +1488,7 @@ filas.forEach(fila => {
         fila.classList.add('hidden');
     }
 });
+}
 // ============================================
 // MÓDULO: COSTOS Y ANÁLISIS
 // ============================================
@@ -2305,4 +2306,45 @@ document.addEventListener('click', (e) => {
 });
 
 console.log('✅ Modules.js cargado correctamente');
+}
+async function adjustStock(id, nombre) {
+    const cantidad = prompt(`¿Cuánto stock deseas añadir a "${nombre}"?\n(Usa número negativo para reducir)`);
+    if (cantidad === null || cantidad === '') return;
+    
+    const cantidadNum = parseFloat(cantidad);
+    if (isNaN(cantidadNum)) {
+        alert('Por favor introduce un número válido');
+        return;
+    }
+    
+    try {
+        const { data: material, error: fetchError } = await supabase
+            .from('materias_primas')
+            .select('stock')
+            .eq('id', id)
+            .single();
+        
+        if (fetchError) throw fetchError;
+        
+        const nuevoStock = parseFloat(material.stock) + cantidadNum;
+        
+        if (nuevoStock < 0) {
+            alert('El stock no puede quedar en negativo');
+            return;
+        }
+        
+        const { error } = await supabase
+            .from('materias_primas')
+            .update({ stock: nuevoStock })
+            .eq('id', id);
+        
+        if (error) throw error;
+        
+        alert(`✅ Stock de "${nombre}" actualizado: ${nuevoStock.toFixed(2)}`);
+        loadMateriales(currentMaterialTab === 'ingredientes' ? 'ingrediente' : 'envase');
+        
+    } catch (error) {
+        console.error('Error ajustando stock:', error);
+        alert('Error al ajustar el stock: ' + error.message);
+    }
 }

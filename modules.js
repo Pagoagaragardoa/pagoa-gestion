@@ -1523,7 +1523,7 @@ async function initCostos() {
     }
     
     // Eventos para recargar cuando cambien mes o año
-    if (mesSelect) {
+   if (mesSelect) {
         mesSelect.addEventListener('change', async () => {
             await loadCostos();
             await loadEvolucionFinanciera();
@@ -1535,6 +1535,11 @@ async function initCostos() {
             await loadEvolucionFinanciera();
         });
     }
+
+    // Botón editar costos fijos
+    document.getElementById('btn-edit-costos-fijos')?.addEventListener('click', async () => {
+        await openEditCostosFijosModal();
+    });
 }
 
 async function loadCostos() {

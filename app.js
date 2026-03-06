@@ -2538,7 +2538,7 @@ function getCostosHTML() {
             <div class="bg-white p-6 rounded-lg card-shadow mb-6">
                 <div class="flex items-center space-x-4">
                     <label class="text-sm font-medium text-gray-700">Analizar Período:</label>
-                    <select id="costos-mes" onchange="loadCostos()" class="px-4 py-2 border rounded-lg">
+                    <select id="costos-mes" class="px-4 py-2 border rounded-lg">
                         <option value="1">Enero</option>
                         <option value="2">Febrero</option>
                         <option value="3">Marzo</option>
@@ -2552,7 +2552,7 @@ function getCostosHTML() {
                         <option value="11">Noviembre</option>
                         <option value="12">Diciembre</option>
                     </select>
-                    <select id="costos-año" onchange="loadCostos()" class="px-4 py-2 border rounded-lg">
+                    <select id="costos-año" class="px-4 py-2 border rounded-lg">
                         <option value="2025">2025</option>
                         <option value="2026">2026</option>
                         <option value="2027">2027</option>
@@ -2618,7 +2618,7 @@ function getCostosHTML() {
                             <i class="fas fa-clipboard-list text-red-600 mr-2"></i>
                             Costos Fijos Mensuales
                         </h3>
-                        <button onclick="openEditCostosFijosModal()" class="text-blue-600 hover:text-blue-800">
+                        <button id="btn-edit-costos-fijos" class="text-blue-600 hover:text-blue-800">
                             <i class="fas fa-edit mr-1"></i>Editar
                         </button>
                     </div>

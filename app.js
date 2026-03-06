@@ -414,21 +414,23 @@ function getProduccionHTML() {
                                    required 
                                    placeholder="Ej: L001"
                                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+                                    <!-- Para envasado: se rellena con select dinámico desde JS -->
+    <select id="produccion-lote-envasado" 
+            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600 hidden">
+        <option value="">Seleccione lote...</option>
+    </select>
                         </div>
                         
                         <!-- Estilo -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Estilo de Cerveza *</label>
-                            <input type="text" 
-                                   id="produccion-estilo" 
-                                   required 
-                                   list="estilos-produccion-datalist"
-                                   onchange="loadRecetaForEstilo()"
-                                   placeholder="Ej: IPA"
-                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
-                            <datalist id="estilos-produccion-datalist"></datalist>
-                        </div>
-                    </div>
+    <label class="block text-sm font-medium text-gray-700 mb-2">Estilo de Cerveza *</label>
+    <select id="produccion-estilo" 
+            required 
+            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+        <option value="">Seleccione estilo...</option>
+    </select>
+    <p class="text-xs text-gray-500 mt-1">Solo estilos con receta definida</p>
+</div>
                     
                     <!-- Volumen -->
                     <div>
@@ -2053,18 +2055,15 @@ function getProduccionHTML() {
                                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
                         </div>
                         
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Estilo de Cerveza *</label>
-                            <input type="text" 
-                                   id="produccion-estilo" 
-                                   required 
-                                   list="estilos-produccion-datalist"
-                                   onchange="loadRecetaForEstilo()"
-                                   placeholder="Ej: IPA"
-                                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
-                            <datalist id="estilos-produccion-datalist"></datalist>
-                        </div>
-                    </div>
+                       <div>
+    <label class="block text-sm font-medium text-gray-700 mb-2">Estilo de Cerveza *</label>
+    <select id="produccion-estilo" 
+            required 
+            class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-600">
+        <option value="">Seleccione estilo...</option>
+    </select>
+    <p class="text-xs text-gray-500 mt-1">Solo estilos con receta definida</p>
+</div>
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Volumen (Litros) *</label>

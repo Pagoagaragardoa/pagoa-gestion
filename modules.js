@@ -2311,7 +2311,6 @@ document.addEventListener('click', (e) => {
 });
 
 console.log('✅ Modules.js cargado correctamente');
-}
 async function adjustStock(id, nombre) {
     const cantidad = prompt(`¿Cuánto stock deseas añadir a "${nombre}"?\n(Usa número negativo para reducir)`);
     if (cantidad === null || cantidad === '') return;
